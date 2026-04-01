@@ -11,7 +11,7 @@ import phasesRouter from './routes/phases';
 import webhooksRouter from './routes/webhooks';
 
 const app = express();
-const PORT = process.env.PORT ?? 3000;
+const PORT = process.env.PORT ?? 3001;
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
@@ -59,6 +59,10 @@ app.use('/webhooks', webhooksRouter);
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[server error]', err.message, err.stack);
   res.status(500).json({ error: 'Internal server error', message: err.message });
+});
+
+app.get('/', (_req, res) => {
+  res.send('Larrikin HQ API is running');
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
