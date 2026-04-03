@@ -30,6 +30,26 @@ function validateHmacSignature(
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(incoming, 'hex'));
 }
 
+function validateTallySignature(
+  rawBody: Buffer,
+  signatureHeader: string | undefined,
+  secret: string
+): boolean {
+  if (!signatureHeader) return false;
+  const incoming = signatureHeader.replace(/^sha256=/, '');
+
+  // Decode incoming to raw bytes — try hex first (64 chars → 32 bytes),
+  // fall back to base64 (44 chars → 32 bytes) if lengths don't match.
+  let incomingBuf = Buffer.from(incoming, 'hex');
+  if (incomingBuf.length !== 32) {
+    incomingBuf = Buffer.from(incoming, 'base64');
+  }
+  if (incomingBuf.length !== 32) return false;
+
+  const expectedBuf = crypto.createHmac('sha256', secret).update(rawBody).digest();
+  return crypto.timingSafeEqual(expectedBuf, incomingBuf);
+}
+
 // ─── DocuSign webhook ─────────────────────────────────────────────────────────
 
 router.post('/docusign', async (req: Request, res: Response) => {
@@ -112,7 +132,7 @@ router.post('/intake-form', async (req: Request, res: Response) => {
   const signature = req.headers['tally-signature'] as string | undefined;
   const secret = process.env.TALLY_WEBHOOK_SECRET ?? '';
 
-  if (!validateHmacSignature(rawBody, signature, secret)) {
+  if (!validateTallySignature(rawBody, signature, secret)) {
     console.warn('[webhooks/intake-form] invalid signature');
     res.status(401).json({ error: 'Invalid signature' });
     return;
