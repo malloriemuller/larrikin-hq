@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, DM_Sans, Barlow_Condensed } from "next/font/google";
+import { Playfair_Display, DM_Sans, Inter } from "next/font/google";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -10,14 +10,14 @@ const playfair = Playfair_Display({
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500", "600"],
   variable: "--font-dm-sans",
   display: "swap",
 });
 
-const barlow = Barlow_Condensed({
+const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "600", "700"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-barlow",
   display: "swap",
 });
@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${barlow.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${dmSans.variable} ${inter.variable}`}>
       <body className="min-h-screen">{children}</body>
     </html>
   );

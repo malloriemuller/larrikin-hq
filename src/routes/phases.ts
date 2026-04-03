@@ -42,4 +42,15 @@ router.patch('/:id', async (req: Request, res: Response) => {
   }
 });
 
+// DELETE /api/phases/:id
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    await airtable.deletePhase(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[phases] delete error', { id: req.params.id, err });
+    res.status(500).json({ error: 'Failed to delete phase' });
+  }
+});
+
 export default router;

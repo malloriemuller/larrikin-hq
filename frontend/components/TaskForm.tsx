@@ -73,7 +73,7 @@ export default function TaskForm({ projects, onSuccess, onCancel }: TaskFormProp
           <Field label="Project *">
             <select value={projectId} onChange={(e) => setProjectId(e.target.value)} className={inputCls} required>
               {projects.length === 0 && <option value="">No active projects</option>}
-              {projects.map((p) => <option key={p.id} value={p.id}>{p.fields.Name}</option>)}
+              {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </Field>
 

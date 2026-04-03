@@ -1,4 +1,4 @@
-import { ProjectType, TaskType, Assignee } from '../types/index';
+import { PhaseType, TaskType, Assignee } from '../types/index';
 
 export interface TaskTemplate {
   Title: string;
@@ -15,16 +15,17 @@ export interface PhaseTemplate {
 }
 
 // ─── Audit: Discovery + Proposal phases ──────────────────────────────────────
+// Removed: 'Send pre-consultation intake form' (system sends via Post-Intro-Call email)
+// Removed: 'Conduct consultation call' (Fireflies logs it)
+// Removed: 'Confirm contract signed + payment received' (audit is complimentary)
+// Removed: 'Conduct results meeting' (Fireflies logs it)
 
 const AUDIT_PHASES: PhaseTemplate[] = [
   {
     'Phase Name': 'Discovery',
     Order: 1,
     tasks: [
-      { Title: 'Send pre-consultation intake form', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Discovery' },
-      { Title: 'Conduct consultation call', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Discovery' },
       { Title: 'Send audit proposal', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Discovery' },
-      { Title: 'Confirm contract signed + payment received', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'High', phaseName: 'Discovery' },
       { Title: 'Schedule audit interviews', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'Medium', phaseName: 'Discovery' },
       { Title: 'Conduct Session 1', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Discovery' },
       { Title: 'Conduct Session 2', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Discovery' },
@@ -40,13 +41,15 @@ const AUDIT_PHASES: PhaseTemplate[] = [
       { Title: 'Build ROI model', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Proposal' },
       { Title: 'Andy internal review', Assignee: 'Andy', 'Task Type': 'QA', Priority: 'Medium', phaseName: 'Proposal' },
       { Title: 'Schedule results meeting', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'Medium', phaseName: 'Proposal' },
-      { Title: 'Conduct results meeting', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Proposal' },
       { Title: 'Send proposal + contract', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'High', phaseName: 'Proposal' },
     ],
   },
 ];
 
 // ─── Build: Onboarding → Build → QA → Launch ─────────────────────────────────
+// Removed: 'Send build kickoff email' (system auto-sends this)
+// Removed: 'Conduct demo meeting' (Fireflies logs it)
+// Removed: 'Send post-demo email' (system queues this automatically)
 
 const BUILD_PHASES: PhaseTemplate[] = [
   {
@@ -57,7 +60,6 @@ const BUILD_PHASES: PhaseTemplate[] = [
       { Title: 'Add spec doc URL to project', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Onboarding' },
       { Title: 'Set milestone schedule', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Onboarding' },
       { Title: 'Collect client tool access + credentials', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'High', phaseName: 'Onboarding' },
-      { Title: 'Send build kickoff email', Assignee: 'Mallorie', 'Task Type': 'Onboarding', Priority: 'High', phaseName: 'Onboarding' },
     ],
   },
   {
@@ -82,20 +84,18 @@ const BUILD_PHASES: PhaseTemplate[] = [
     Order: 4,
     tasks: [
       { Title: 'Schedule demo meeting', Assignee: 'Mallorie', 'Task Type': 'Build', Priority: 'High', phaseName: 'Launch' },
-      { Title: 'Conduct demo meeting', Assignee: 'Mallorie', 'Task Type': 'Build', Priority: 'High', phaseName: 'Launch' },
-      { Title: 'Send post-demo email', Assignee: 'Mallorie', 'Task Type': 'Build', Priority: 'High', phaseName: 'Launch' },
     ],
   },
 ];
 
 // ─── Retainer: Retainer phase ─────────────────────────────────────────────────
+// Removed: 'Retainer contract signed' (this is an event, not a task)
 
 const RETAINER_PHASES: PhaseTemplate[] = [
   {
     'Phase Name': 'Retainer',
     Order: 1,
     tasks: [
-      { Title: 'Retainer contract signed', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'High', phaseName: 'Retainer' },
       { Title: 'Set up request intake', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'High', phaseName: 'Retainer' },
       { Title: 'Schedule 30-day referral ask task', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'Medium', phaseName: 'Retainer' },
       { Title: 'Schedule 90-day case study request task', Assignee: 'Mallorie', 'Task Type': 'Admin', Priority: 'Medium', phaseName: 'Retainer' },
@@ -105,8 +105,8 @@ const RETAINER_PHASES: PhaseTemplate[] = [
 
 // ─── Export ───────────────────────────────────────────────────────────────────
 
-export function getPhaseTemplates(projectType: ProjectType): PhaseTemplate[] {
-  switch (projectType) {
+export function getPhaseTemplates(phaseType: PhaseType): PhaseTemplate[] {
+  switch (phaseType) {
     case 'Audit':
       return AUDIT_PHASES;
     case 'Build':
@@ -114,6 +114,6 @@ export function getPhaseTemplates(projectType: ProjectType): PhaseTemplate[] {
     case 'Retainer':
       return RETAINER_PHASES;
     default:
-      throw new Error(`Unknown project type: ${projectType}`);
+      throw new Error(`Unknown phase type: ${phaseType}`);
   }
 }

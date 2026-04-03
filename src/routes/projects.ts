@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import * as airtable from '../services/airtable';
-import { ProjectStatus, CreateProjectBody, UpdateProjectBody } from '../types/index';
+import * as onboarding from '../services/onboarding';
+import { ProjectStatus, CreateProjectBody, UpdateProjectBody, PhaseType } from '../types/index';
 
 const router = Router();
 
@@ -39,8 +40,8 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const body = req.body as CreateProjectBody;
-    if (!body.Name || !body.Client || !body.Type) {
-      res.status(400).json({ error: 'Name, Client, and Type are required' });
+    if (!body.name) {
+      res.status(400).json({ error: 'name is required' });
       return;
     }
     const project = await airtable.createProject(body);
@@ -60,6 +61,62 @@ router.patch('/:id', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[projects] update error', { id: req.params.id, err });
     res.status(500).json({ error: 'Failed to update project' });
+  }
+});
+
+// DELETE /api/projects/:id
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const project = await airtable.getProject(req.params.id);
+    const phaseIds: string[] = project.fields['Project Phases'] ?? [];
+    await Promise.all(phaseIds.map(id => airtable.deletePhase(id)));
+    await airtable.deleteProject(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[projects] delete error:', err);
+    res.status(500).json({ error: 'Failed to delete project' });
+  }
+});
+
+// GET /api/projects/:id/communications-log
+router.get('/:id/communications-log', async (req: Request, res: Response) => {
+  try {
+    const entries = await airtable.getCommunicationsLogByProjectId(req.params.id);
+    res.json(entries);
+  } catch (err) {
+    console.error('[projects] comms log fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch communications log' });
+  }
+});
+
+// GET /api/projects/:id/engagement
+router.get('/:id/engagement', async (req: Request, res: Response) => {
+  try {
+    const project = await airtable.getProject(req.params.id);
+    const phaseIds: string[] = project.fields['Project Phases'] ?? [];
+    const phases = await Promise.all(phaseIds.map(id => airtable.getPhase(id)));
+    phases.sort((a, b) => ((a.fields['Order'] ?? 0) as number) - ((b.fields['Order'] ?? 0) as number));
+    res.json({ project, phases });
+  } catch (err) {
+    console.error('[projects] engagement fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch engagement' });
+  }
+});
+
+// POST /api/projects/:id/activate-phase
+router.post('/:id/activate-phase', async (req: Request, res: Response) => {
+  try {
+    const project = await airtable.getProject(req.params.id);
+    const client = await airtable.getClient(project.fields['Client'][0]);
+    const { phaseType } = req.body as { phaseType: PhaseType };
+    if (!phaseType || !['Audit', 'Build', 'Retainer'].includes(phaseType)) {
+      return res.status(400).json({ error: 'Invalid phaseType. Must be Audit, Build, or Retainer.' });
+    }
+    await onboarding.activatePhaseManually(client.fields.Email, phaseType, req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[projects] activate-phase error:', err);
+    res.status(500).json({ error: 'Failed to activate phase' });
   }
 });
 

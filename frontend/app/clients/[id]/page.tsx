@@ -59,7 +59,7 @@ function StageBadge({ stage }: { stage: ClientStage }) {
 }
 
 function ProjectPill({ project }: { project: Project }) {
-  const dot = PROJECT_STATUS_DOT[project.fields.Status] ?? 'bg-[rgba(237,228,200,0.20)]';
+  const dot = PROJECT_STATUS_DOT[project.status] ?? 'bg-[rgba(237,228,200,0.20)]';
   return (
     <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[3px] border border-[rgba(196,175,90,0.13)] bg-[rgba(255,255,255,0.03)]">
       <span className={`w-1.5 h-1.5 rounded-full flex-none ${dot}`} />
@@ -68,13 +68,13 @@ function ProjectPill({ project }: { project: Project }) {
           className="text-[14px] font-semibold text-[#EDE4C8] leading-snug truncate"
           style={{ fontFamily: 'var(--font-playfair), serif' }}
         >
-          {project.fields.Name}
+          {project.name}
         </p>
         <p
           className="text-[11px] uppercase tracking-[0.12em] text-[rgba(237,228,200,0.40)] mt-0.5"
           style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
         >
-          {project.fields.Type} · {project.fields.Status}
+          {project.status}
         </p>
       </div>
     </div>

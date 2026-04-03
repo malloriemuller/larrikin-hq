@@ -8,19 +8,25 @@ import EmailQueuePanel from '@/components/EmailQueuePanel';
 import TaskList from '@/components/TaskList';
 import ProjectCard from '@/components/ProjectCard';
 import ClientForm from '@/components/ClientForm';
+import ProjectForm from '@/components/ProjectForm';
 import TaskForm from '@/components/TaskForm';
 import {
   listClients,
   listProjects,
   listTasks,
   listEmailQueue,
-  getProject,
+  getEngagement,
+  activatePhase,
+  updateProjectPhase,
+  updateProject,
+  deletePhase,
   generateEmailDraft,
   Client,
   Project,
+  ProjectPhase,
   Task,
   EmailQueueEntry,
-  Phase,
+  EngagementOverview,
   EmailType,
 } from '@/lib/api';
 
@@ -29,42 +35,76 @@ type Tab = 'pipeline' | 'projects' | 'tasks' | 'queue';
 export default function MallorieDashboard() {
   const [tab, setTab] = useState<Tab>('pipeline');
   const [clients, setClients] = useState<Client[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectsWithPhases, setProjectsWithPhases] = useState<
-    Array<{ project: Project; phases: Phase[] }>
-  >([]);
+  const [engagements, setEngagements] = useState<EngagementOverview[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [emailQueue, setEmailQueue] = useState<EmailQueueEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [showClientForm, setShowClientForm] = useState(false);
+  const [showProjectForm, setShowProjectForm] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
 
   const loadAll = useCallback(async () => {
     try {
-      const [clientData, projectData, taskData, queueData] = await Promise.all([
+      const [clientData, projectList, taskData, queueData] = await Promise.all([
         listClients(),
         listProjects(),
         listTasks(),
         listEmailQueue(),
       ]);
       setClients(clientData);
-      setProjects(projectData);
       setTasks(taskData);
       setEmailQueue(queueData);
 
-      const withPhases = await Promise.all(
-        projectData.map(async (p) => {
-          const full = await getProject(p.id);
-          return { project: p, phases: full.phases ?? [] };
-        })
+      const engagementData = await Promise.allSettled(
+        projectList.map(p => getEngagement(p.id))
       );
-      setProjectsWithPhases(withPhases);
+      const resolved = engagementData
+        .filter((r): r is PromiseFulfilledResult<EngagementOverview> => r.status === 'fulfilled')
+        .map(r => r.value);
+      const failed = engagementData.filter(r => r.status === 'rejected');
+      if (failed.length > 0) {
+        console.error('[loadAll] failed to load engagement(s):', failed);
+      }
+      setEngagements(resolved);
     } catch (err) {
       console.error('Failed to load dashboard data', err);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handlePhaseUpdate = async (phaseId: string, fields: Partial<ProjectPhase>) => {
+    await updateProjectPhase(phaseId, fields);
+    await loadAll();
+  };
+
+  const handleProjectUpdate = async (projectId: string, fields: Partial<Project>) => {
+    await updateProject(projectId, fields);
+    await loadAll();
+  };
+
+  const handleActivatePhase = async (
+    projectId: string,
+    phaseType: 'Audit' | 'Build' | 'Retainer'
+  ) => {
+    await activatePhase(projectId, phaseType);
+    await loadAll();
+  };
+
+  const handleDeletePhase = async (phaseId: string) => {
+    await deletePhase(phaseId);
+    await loadAll();
+  };
+
+  const handleGenerateEmail = async (projectId: string, phaseId: string, emailType: string) => {
+    try {
+      await generateEmailDraft(projectId, emailType as EmailType);
+      await loadAll();
+      setTab('queue');
+    } catch {
+      alert(`Failed to generate draft for "${emailType}". Check the backend logs.`);
+    }
+  };
 
   useEffect(() => {
     loadAll();
@@ -88,9 +128,16 @@ export default function MallorieDashboard() {
           onCancel={() => setShowClientForm(false)}
         />
       )}
+      {showProjectForm && (
+        <ProjectForm
+          clients={clients}
+          onSuccess={async () => { setShowProjectForm(false); await loadAll(); }}
+          onCancel={() => setShowProjectForm(false)}
+        />
+      )}
       {showTaskForm && (
         <TaskForm
-          projects={projects}
+          projects={engagements.map(e => e.project)}
           onSuccess={async () => { setShowTaskForm(false); await loadAll(); }}
           onCancel={() => setShowTaskForm(false)}
         />
@@ -195,39 +242,48 @@ export default function MallorieDashboard() {
 
             {tab === 'projects' && (
               <section>
-                <div className="border-b border-[rgba(196,175,90,0.12)] pb-5 mb-7">
-                  <p
-                    className="text-[12px] font-semibold tracking-[0.22em] uppercase text-[#C4AF5A] mb-2"
-                    style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                <div className="flex items-end justify-between border-b border-[rgba(196,175,90,0.12)] pb-5 mb-7">
+                  <div>
+                    <p
+                      className="text-[12px] font-semibold tracking-[0.22em] uppercase text-[#C4AF5A] mb-2"
+                      style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                    >
+                      Active Projects
+                    </p>
+                    <h2 className="text-[2.25rem] font-bold text-[#EDE4C8] leading-none">
+                      {engagements.length}
+                      <span className="text-2xl font-normal text-[rgba(237,228,200,0.40)] ml-2">
+                        {engagements.length === 1 ? 'project' : 'projects'}
+                      </span>
+                    </h2>
+                  </div>
+                  <button
+                    onClick={() => setShowProjectForm(true)}
+                    className="flex items-center gap-2 px-4 rounded-sm bg-[#C4AF5A] text-[#0E1B11] text-[12px] font-bold hover:bg-[#D4BF6A] transition-colors uppercase tracking-[0.12em]"
+                    style={{ minHeight: '40px', fontFamily: 'var(--font-barlow), sans-serif' }}
                   >
-                    Active Projects
-                  </p>
-                  <h2 className="text-[2.25rem] font-bold text-[#EDE4C8] leading-none">
-                    {projects.length}
-                    <span className="text-2xl font-normal text-[rgba(237,228,200,0.40)] ml-2">
-                      {projects.length === 1 ? 'project' : 'projects'}
-                    </span>
-                  </h2>
+                    + New Project
+                  </button>
                 </div>
-                {projectsWithPhases.length === 0 ? (
+                {engagements.length === 0 ? (
                   <p className="text-base text-[rgba(237,228,200,0.40)] italic">No active projects</p>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {projectsWithPhases.map(({ project, phases }) => (
+                  <div className="flex flex-col gap-6">
+                    {engagements.map(({ project, phases }) => (
                       <ProjectCard
                         key={project.id}
                         project={project}
                         phases={phases}
-                        onUpdate={loadAll}
-                        onTriggerEmail={async (type) => {
-                          try {
-                            await generateEmailDraft(project.id, type as EmailType);
-                            await loadAll();
-                            setTab('queue');
-                          } catch {
-                            alert(`Failed to generate draft for "${type}". Check the backend logs.`);
-                          }
-                        }}
+                        tasks={tasks.filter(t => t.fields.Project?.includes(project.id))}
+                        clientName={
+                          clients.find(c => c.id === project.clientId)?.fields.Name ?? project.name
+                        }
+                        onPhaseUpdate={handlePhaseUpdate}
+                        onProjectUpdate={handleProjectUpdate}
+                        onActivatePhase={handleActivatePhase}
+                        onGenerateEmail={handleGenerateEmail}
+                        onRefresh={loadAll}
+                        onDeletePhase={handleDeletePhase}
                       />
                     ))}
                   </div>
@@ -258,7 +314,13 @@ export default function MallorieDashboard() {
                     + New Task
                   </button>
                 </div>
-                <TaskList tasks={tasks} onUpdate={loadAll} showFilters={true} />
+                <TaskList
+                    tasks={tasks}
+                    onUpdate={loadAll}
+                    showFilters={true}
+                    engagements={engagements}
+                    clients={clients}
+                  />
               </section>
             )}
 

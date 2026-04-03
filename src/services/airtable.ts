@@ -8,6 +8,7 @@ import {
   AirtableCommunicationsLog,
   AirtableCredential,
   ClientStage,
+  PhaseType,
   ProjectStatus,
   TaskStatus,
   TaskType,
@@ -16,6 +17,7 @@ import {
   CreateClientBody,
   UpdateClientBody,
   CreateProjectBody,
+  CreateProjectPhaseBody,
   UpdateProjectBody,
   CreateTaskBody,
   UpdateTaskBody,
@@ -160,9 +162,15 @@ export async function getProject(id: string): Promise<AirtableProject> {
 
 export async function createProject(data: CreateProjectBody): Promise<AirtableProject> {
   return createRecord<AirtableProject>('Projects', {
-    ...data,
-    Status: data.Status ?? 'Not Started',
-    'Contract Status': data['Contract Status'] ?? 'Pending',
+    'Name': data.name,
+    'Client': [data.clientId],
+    'Status': 'In Progress',
+    'Start Date': data.startDate ?? new Date().toISOString().split('T')[0],
+    ...(data.notes && { 'Notes': data.notes }),
+    ...(data.scopeNotes && { 'v1 Scope Notes': data.scopeNotes }),
+    ...(data.quotedPrice !== undefined && { 'Quoted Price': data.quotedPrice }),
+    ...(data.targetEndDate && { 'Target End Date': data.targetEndDate }),
+    ...(data.specUrl && { 'Spec URL': data.specUrl }),
   });
 }
 
@@ -171,6 +179,14 @@ export async function updateProject(
   data: UpdateProjectBody
 ): Promise<AirtableProject> {
   return updateRecord<AirtableProject>('Projects', id, data);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  return deleteRecord('Projects', id);
+}
+
+export async function deletePhase(id: string): Promise<void> {
+  return deleteRecord('Project Phases', id);
 }
 
 // ─── Project Phases ───────────────────────────────────────────────────────────
@@ -202,6 +218,21 @@ export async function createPhase(fields: {
   });
 }
 
+export async function createProjectPhase(data: CreateProjectPhaseBody): Promise<AirtableProjectPhase> {
+  return createRecord<AirtableProjectPhase>('Project Phases', {
+    'Phase Name': data.phaseName,
+    'Project': [data.projectId],
+    'Phase Type': data.phaseType,
+    'Order': data.order,
+    'Status': data.status ?? 'Pending',
+    'Contract Status': data.contractStatus ?? 'Not Started',
+    ...(data.contractDate && { 'Contract Date': data.contractDate }),
+    ...(data.targetDate && { 'Target Date': data.targetDate }),
+    ...(data.billingMilestone !== undefined && { 'Billing Milestone': data.billingMilestone }),
+    ...(data.billingAmount !== undefined && { 'Billing Amount': data.billingAmount }),
+  });
+}
+
 export async function updatePhase(
   id: string,
   fields: Partial<{
@@ -213,6 +244,28 @@ export async function updatePhase(
   }>
 ): Promise<AirtableProjectPhase> {
   return updateRecord<AirtableProjectPhase>('Project Phases', id, fields);
+}
+
+export async function updateProjectPhase(
+  phaseId: string,
+  fields: Partial<AirtableProjectPhase['fields']>
+): Promise<AirtableProjectPhase> {
+  return updateRecord<AirtableProjectPhase>('Project Phases', phaseId, fields);
+}
+
+export async function findActiveProjectByClientId(clientId: string): Promise<AirtableProject | null> {
+  const records = await listRecords<AirtableProject>('Projects', {
+    filterByFormula: `AND(FIND("${clientId}", ARRAYJOIN({Client})), OR({Status}="In Progress", {Status}="Not Started"))`,
+    maxRecords: 1,
+  });
+  return records[0] ?? null;
+}
+
+export async function getPhasesByProjectId(projectId: string): Promise<AirtableProjectPhase[]> {
+  const phases = await listRecords<AirtableProjectPhase>('Project Phases', {
+    filterByFormula: `FIND("${projectId}", ARRAYJOIN({Project}))`,
+  });
+  return phases.sort((a, b) => a.fields['Order'] - b.fields['Order']);
 }
 
 // ─── Tasks ────────────────────────────────────────────────────────────────────
@@ -326,6 +379,14 @@ export async function listCommunicationsLog(clientId: string): Promise<AirtableC
     filterByFormula: `FIND("${clientId}", ARRAYJOIN({Client}))`,
     sort: [{ field: 'Date', direction: 'desc' }],
   });
+}
+
+export async function getCommunicationsLogByProjectId(projectId: string): Promise<AirtableCommunicationsLog[]> {
+  // ARRAYJOIN on a linked field returns display names, not record IDs — filter in JS instead.
+  const all = await listRecords<AirtableCommunicationsLog>('Communications Log', {});
+  return all
+    .filter(entry => (entry.fields['Project'] as string[] | undefined)?.includes(projectId) ?? false)
+    .sort((a, b) => new Date(b.fields.Date).getTime() - new Date(a.fields.Date).getTime());
 }
 
 export async function createCommunicationsLogEntry(fields: {

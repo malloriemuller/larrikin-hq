@@ -110,7 +110,6 @@ router.post('/generate', async (req: Request, res: Response) => {
       clientName: client.fields.Name,
       company: client.fields.Company,
       projectName: project.fields.Name,
-      projectType: project.fields.Type,
     });
 
     const entry = await airtable.createEmailQueueEntry({

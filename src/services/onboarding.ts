@@ -2,42 +2,30 @@ import * as airtable from './airtable';
 import { generateEmailDraft, generateInterviewGuideWithSearch } from './claude';
 import { sendEmail } from './gmail';
 import { getPhaseTemplates } from '../templates/taskTemplates';
-import { ProjectType, OnboardingResult, EmailType } from '../types/index';
+import { PhaseType, ClientStage, EmailType } from '../types/index';
 
-// ─── Shared: create phases + tasks from template ──────────────────────────────
+// ─── Private: create tasks from phase template ────────────────────────────────
 
-async function createPhasesAndTasks(
+async function createPhaseTasks(
+  phaseId: string,
   projectId: string,
-  projectType: ProjectType
-): Promise<{ phasesCreated: string[]; tasksCreated: number }> {
-  const phaseTemplates = getPhaseTemplates(projectType);
-  const phasesCreated: string[] = [];
-  let tasksCreated = 0;
-
+  phaseType: PhaseType
+): Promise<void> {
+  const phaseTemplates = getPhaseTemplates(phaseType);
   for (const phaseTemplate of phaseTemplates) {
-    const phase = await airtable.createPhase({
-      'Phase Name': phaseTemplate['Phase Name'],
-      Project: [projectId],
-      Order: phaseTemplate.Order,
-      Status: phaseTemplate.Order === 1 ? 'Active' : 'Pending',
-    });
-    phasesCreated.push(phase.id);
-
-    for (const taskTemplate of phaseTemplate.tasks) {
+    for (const task of phaseTemplate.tasks) {
       await airtable.createTask({
-        Title: taskTemplate.Title,
+        Title: task.Title,
         Project: [projectId],
-        Phase: [phase.id],
-        Assignee: taskTemplate.Assignee,
-        'Task Type': taskTemplate['Task Type'],
-        Priority: taskTemplate.Priority,
+        Phase: [phaseId],
+        'Phase Group': phaseTemplate['Phase Name'],
+        Assignee: task.Assignee,
+        'Task Type': task['Task Type'],
+        Priority: task.Priority,
         Status: 'To Do',
       });
-      tasksCreated++;
     }
   }
-
-  return { phasesCreated, tasksCreated };
 }
 
 // ─── Shared: generate + queue or auto-send email ──────────────────────────────
@@ -54,7 +42,7 @@ async function queueOrSendEmail({
   projectId?: string;
   emailType: EmailType;
   to: string;
-  context: { clientName: string; company: string; projectName?: string; projectType?: ProjectType; additionalContext?: string; intakeResponses?: string; firefliesSummary?: string; referrerName?: string };
+  context: { clientName: string; company: string; projectName?: string; additionalContext?: string; intakeResponses?: string; firefliesSummary?: string; referrerName?: string };
   autoSend: boolean;
 }): Promise<string> {
   const draft = await generateEmailDraft(emailType, context);
@@ -118,202 +106,138 @@ async function queueOrSendEmail({
   return entry.id;
 }
 
-// ─── Audit contract signed ────────────────────────────────────────────────────
+// ─── Private: core activation logic ──────────────────────────────────────────
+
+async function activatePhase(
+  clientEmail: string,
+  phaseType: PhaseType,
+  envelopeId?: string,
+  projectId?: string
+): Promise<void> {
+  // 1. Find client — throw if not found
+  const client = await airtable.findClientByEmail(clientEmail);
+  if (!client) {
+    throw new Error(`[onboarding] No client found for email: ${clientEmail}`);
+  }
+
+  // 2. Use provided projectId directly, or search for an active engagement, or create one
+  let project = projectId
+    ? await airtable.getProject(projectId)
+    : await airtable.findActiveProjectByClientId(client.id);
+  if (!project) {
+    project = await airtable.createProject({
+      name: `${client.fields.Name} Engagement`,
+      clientId: client.id,
+      startDate: new Date().toISOString().split('T')[0],
+    });
+  }
+
+  // 3. Guard: prevent duplicate phases of the same type
+  const existingPhaseIds: string[] = (project.fields['Project Phases'] as string[] | undefined) ?? [];
+  if (existingPhaseIds.length > 0) {
+    const existingPhases = await Promise.all(existingPhaseIds.map(id => airtable.getPhase(id)));
+    const duplicate = existingPhases.find(p => p.fields['Phase Type'] === phaseType);
+    if (duplicate) {
+      throw new Error(`[onboarding] A ${phaseType} phase already exists on project ${project.id}`);
+    }
+  }
+
+  // 4. Create the phase record
+  const phaseOrderMap: Record<PhaseType, number> = {
+    Audit: 1,
+    Build: 2,
+    Retainer: 3,
+  };
+
+  const phase = await airtable.createProjectPhase({
+    phaseName: `${phaseType} — ${client.fields.Name}`,
+    projectId: project.id,
+    phaseType,
+    order: phaseOrderMap[phaseType],
+    status: 'Active',
+    contractStatus: envelopeId ? 'Signed' : 'Not Started',
+    contractDate: envelopeId
+      ? new Date().toISOString().split('T')[0]
+      : undefined,
+  });
+
+  // 5. Update client Stage
+  const stageMap: Record<PhaseType, ClientStage> = {
+    Audit: 'Discovery',
+    Build: 'Delivery',
+    Retainer: 'Retainer',
+  };
+  await airtable.updateClient(client.id, { Stage: stageMap[phaseType] });
+
+  // 6. Create tasks from templates linked to this phase
+  await createPhaseTasks(phase.id, project.id, phaseType);
+
+  // 7. Log the event
+  await airtable.createCommunicationsLogEntry({
+    Client: [client.id],
+    Project: [project.id],
+    Date: new Date().toISOString().split('T')[0],
+    Type: 'Note',
+    Summary: envelopeId
+      ? `${phaseType} contract signed. DocuSign envelope: ${envelopeId}`
+      : `${phaseType} phase activated manually.`,
+    Author: 'Mallorie',
+  });
+
+  // 8. Queue or auto-send the phase kickoff email
+  // Audit and Build auto-send; Retainer queues for Mallorie review
+  const emailTypeMap: Record<PhaseType, EmailType> = {
+    Audit: 'Welcome Email',
+    Build: 'Post-Results-Meeting',
+    Retainer: 'Retainer Onboarding Email',
+  };
+  const autoSend = phaseType !== 'Retainer';
+
+  await queueOrSendEmail({
+    clientId: client.id,
+    projectId: project.id,
+    emailType: emailTypeMap[phaseType],
+    to: client.fields.Email,
+    context: {
+      clientName: client.fields.Name,
+      company: client.fields.Company,
+      projectName: project.fields['Name'],
+    },
+    autoSend,
+  });
+}
+
+// ─── Exported contract-signed handlers (wrappers) ────────────────────────────
 
 export async function handleAuditContractSigned(
   clientEmail: string,
   envelopeId: string
-): Promise<OnboardingResult> {
-  // 1. Find or create client
-  let client = await airtable.findClientByEmail(clientEmail);
-  if (!client) {
-    throw new Error(
-      `[onboarding] no client record found for email ${clientEmail} (DocuSign envelope ${envelopeId})`
-    );
-  }
-
-  // 2. Create project
-  const project = await airtable.createProject({
-    Name: `${client.fields.Company} — Audit`,
-    Client: [client.id],
-    Type: 'Audit',
-    Status: 'In Progress',
-    'Contract Status': 'Signed',
-    'Contract Date': new Date().toISOString().split('T')[0],
-  });
-
-  // 3. Update client stage → Discovery
-  await airtable.updateClient(client.id, { Stage: 'Discovery' });
-
-  // 4. Create phases and tasks
-  const { phasesCreated, tasksCreated } = await createPhasesAndTasks(project.id, 'Audit');
-
-  // 5. Log onboarding event
-  await airtable.createCommunicationsLogEntry({
-    Client: [client.id],
-    Project: [project.id],
-    Date: new Date().toISOString().split('T')[0],
-    Type: 'Note',
-    Summary: `Audit contract signed — project created with ${phasesCreated.length} phases and ${tasksCreated} tasks. Client stage → Discovery.`,
-    Author: 'Mallorie',
-  });
-
-  // 6. Auto-send welcome email
-  const emailId = await queueOrSendEmail({
-    clientId: client.id,
-    projectId: project.id,
-    emailType: 'Welcome Email',
-    to: clientEmail,
-    context: {
-      clientName: client.fields.Name,
-      company: client.fields.Company,
-      projectName: project.fields.Name,
-      projectType: 'Audit',
-    },
-    autoSend: true,
-  });
-
-  console.log('[onboarding] audit onboarding complete', {
-    clientId: client.id,
-    projectId: project.id,
-    phasesCreated: phasesCreated.length,
-    tasksCreated,
-  });
-
-  return { clientId: client.id, projectId: project.id, phasesCreated, tasksCreated, emailQueued: emailId };
+): Promise<void> {
+  await activatePhase(clientEmail, 'Audit', envelopeId);
 }
-
-// ─── Build contract signed ────────────────────────────────────────────────────
 
 export async function handleBuildContractSigned(
   clientEmail: string,
   envelopeId: string
-): Promise<OnboardingResult> {
-  const client = await airtable.findClientByEmail(clientEmail);
-  if (!client) {
-    throw new Error(
-      `[onboarding] no client record found for email ${clientEmail} (DocuSign envelope ${envelopeId})`
-    );
-  }
-
-  // Find existing project in Proposal/Not Started state, or create one
-  const existingProjects = await airtable.listProjects({ clientId: client.id });
-  let project = existingProjects.find(
-    (p) => p.fields.Type === 'Build' && p.fields.Status !== 'Complete'
-  );
-
-  if (project) {
-    project = await airtable.updateProject(project.id, {
-      Status: 'In Progress',
-      'Contract Status': 'Signed',
-      'Contract Date': new Date().toISOString().split('T')[0],
-    });
-  } else {
-    project = await airtable.createProject({
-      Name: `${client.fields.Company} — Build`,
-      Client: [client.id],
-      Type: 'Build',
-      Status: 'In Progress',
-      'Contract Status': 'Signed',
-      'Contract Date': new Date().toISOString().split('T')[0],
-    });
-  }
-
-  // Update client stage → Delivery
-  await airtable.updateClient(client.id, { Stage: 'Delivery' });
-
-  const { phasesCreated, tasksCreated } = await createPhasesAndTasks(project.id, 'Build');
-
-  // Log onboarding event
-  await airtable.createCommunicationsLogEntry({
-    Client: [client.id],
-    Project: [project.id],
-    Date: new Date().toISOString().split('T')[0],
-    Type: 'Note',
-    Summary: `Build contract signed — project created with ${phasesCreated.length} phases and ${tasksCreated} tasks. Client stage → Delivery.`,
-    Author: 'Mallorie',
-  });
-
-  // Auto-send build kickoff email
-  const emailId = await queueOrSendEmail({
-    clientId: client.id,
-    projectId: project.id,
-    emailType: 'Welcome Email',
-    to: clientEmail,
-    context: {
-      clientName: client.fields.Name,
-      company: client.fields.Company,
-      projectName: project.fields.Name,
-      projectType: 'Build',
-    },
-    autoSend: true,
-  });
-
-  console.log('[onboarding] build onboarding complete', {
-    clientId: client.id,
-    projectId: project.id,
-  });
-
-  return { clientId: client.id, projectId: project.id, phasesCreated, tasksCreated, emailQueued: emailId };
+): Promise<void> {
+  await activatePhase(clientEmail, 'Build', envelopeId);
 }
-
-// ─── Retainer contract signed ─────────────────────────────────────────────────
 
 export async function handleRetainerContractSigned(
   clientEmail: string,
   envelopeId: string
-): Promise<OnboardingResult> {
-  const client = await airtable.findClientByEmail(clientEmail);
-  if (!client) {
-    throw new Error(
-      `[onboarding] no client record found for email ${clientEmail} (DocuSign envelope ${envelopeId})`
-    );
-  }
+): Promise<void> {
+  await activatePhase(clientEmail, 'Retainer', envelopeId);
+}
 
-  const project = await airtable.createProject({
-    Name: `${client.fields.Company} — Retainer`,
-    Client: [client.id],
-    Type: 'Retainer',
-    Status: 'In Progress',
-    'Contract Status': 'Signed',
-    'Contract Date': new Date().toISOString().split('T')[0],
-  });
+// ─── Manual dashboard trigger ─────────────────────────────────────────────────
 
-  await airtable.updateClient(client.id, { Stage: 'Retainer' });
-
-  const { phasesCreated, tasksCreated } = await createPhasesAndTasks(project.id, 'Retainer');
-
-  // Log onboarding event
-  await airtable.createCommunicationsLogEntry({
-    Client: [client.id],
-    Project: [project.id],
-    Date: new Date().toISOString().split('T')[0],
-    Type: 'Note',
-    Summary: `Retainer contract signed — project created with ${phasesCreated.length} phases and ${tasksCreated} tasks. Client stage → Retainer.`,
-    Author: 'Mallorie',
-  });
-
-  // Queue for Mallorie's review — not auto-sent
-  const emailId = await queueOrSendEmail({
-    clientId: client.id,
-    projectId: project.id,
-    emailType: 'Retainer Onboarding Email',
-    to: clientEmail,
-    context: {
-      clientName: client.fields.Name,
-      company: client.fields.Company,
-      projectName: project.fields.Name,
-      projectType: 'Retainer',
-    },
-    autoSend: false,
-  });
-
-  console.log('[onboarding] retainer onboarding complete', {
-    clientId: client.id,
-    projectId: project.id,
-  });
-
-  return { clientId: client.id, projectId: project.id, phasesCreated, tasksCreated, emailQueued: emailId };
+export async function activatePhaseManually(
+  clientEmail: string,
+  phaseType: PhaseType,
+  projectId?: string
+): Promise<void> {
+  await activatePhase(clientEmail, phaseType, undefined, projectId);
 }
 
 // ─── Intake form submitted ────────────────────────────────────────────────────
@@ -455,7 +379,7 @@ export async function handleFirefliesSessionEnded(
   const baseContext = {
     clientName: client.fields.Name,
     company: client.fields.Company,
-    projectName: activeProject?.fields.Name,
+    projectName: activeProject?.fields['Name'],
   };
 
   switch (kind) {
@@ -596,7 +520,7 @@ export async function handlePhaseCompleted(
     context: {
       clientName: client.fields.Name,
       company: client.fields.Company,
-      projectName: project.fields.Name,
+      projectName: project.fields['Name'],
     },
     autoSend: false,
   });

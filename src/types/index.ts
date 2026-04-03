@@ -10,9 +10,11 @@ export type ClientStage =
 
 export type ProjectType = 'Audit' | 'Build' | 'Retainer';
 
+export type PhaseType = 'Audit' | 'Build' | 'Retainer';
+
 export type ProjectStatus = 'Not Started' | 'In Progress' | 'Complete' | 'On Hold';
 
-export type ContractStatus = 'Not Required' | 'Pending' | 'Signed';
+export type ContractStatus = 'Not Started' | 'Sent' | 'Signed';
 
 export type PhaseStatus = 'Pending' | 'Active' | 'Complete';
 
@@ -62,36 +64,43 @@ export interface AirtableClient {
   };
 }
 
-export interface AirtableProject {
+export type AirtableProject = {
   id: string;
   fields: {
-    Name: string;
-    Client: string[]; // linked record IDs
-    Type: ProjectType;
-    Status: ProjectStatus;
-    'Contract Status': ContractStatus;
+    'Name': string;
+    'Client': string[];
+    'Status': 'Not Started' | 'In Progress' | 'Complete' | 'On Hold';
     'Contract Date'?: string;
     'Quoted Price'?: number;
     'Start Date'?: string;
     'Target End Date'?: string;
-    'v1 Scope Notes'?: string;
+    'Notes'?: string;
+    'Project Phases'?: string[];
+    'Tasks'?: string[];
+    'Email Queue'?: string[];
+    'Communications Log'?: string[];
     'Spec URL'?: string;
-    Notes?: string;
+    'v1 Scope Notes'?: string;
   };
-}
+};
 
-export interface AirtableProjectPhase {
+export type AirtableProjectPhase = {
   id: string;
   fields: {
     'Phase Name': string;
-    Project: string[]; // linked record IDs
-    Order: number;
-    Status: PhaseStatus;
+    'Project': string[];
+    'Phase Type': PhaseType;
+    'Order': number;
+    'Status': PhaseStatus;
+    'Contract Status': ContractStatus;
+    'Contract Date'?: string;
     'Target Date'?: string;
-    'Billing Milestone': boolean;
+    'Billing Milestone'?: boolean;
     'Billing Amount'?: number;
+    'Tasks'?: string[];
+    'Email Queue'?: string[];
   };
-}
+};
 
 export interface AirtableTask {
   id: string;
@@ -99,6 +108,7 @@ export interface AirtableTask {
     Title: string;
     Project: string[]; // linked record IDs
     Phase?: string[]; // linked record IDs (optional)
+    'Phase Group'?: string;
     Description?: string;
     Assignee: Assignee;
     'Task Type': TaskType;
@@ -172,19 +182,34 @@ export interface UpdateClientBody {
   Notes?: string;
 }
 
-export interface CreateProjectBody {
-  Name: string;
-  Client: string[]; // Airtable record ID(s)
-  Type: ProjectType;
-  Status?: ProjectStatus;
-  'Contract Status'?: ContractStatus;
-  'Contract Date'?: string;
-  'Quoted Price'?: number;
-  'Start Date'?: string;
-  'Target End Date'?: string;
-  'v1 Scope Notes'?: string;
-  Notes?: string;
-}
+export type CreateProjectBody = {
+  name: string;
+  clientId: string;
+  notes?: string;
+  scopeNotes?: string;
+  quotedPrice?: number;
+  startDate?: string;
+  targetEndDate?: string;
+  specUrl?: string;
+};
+
+export type CreateProjectPhaseBody = {
+  phaseName: string;
+  projectId: string;
+  phaseType: PhaseType;
+  order: number;
+  status?: PhaseStatus;
+  contractStatus?: ContractStatus;
+  contractDate?: string;
+  targetDate?: string;
+  billingMilestone?: boolean;
+  billingAmount?: number;
+};
+
+export type EngagementOverview = {
+  project: AirtableProject;
+  phases: AirtableProjectPhase[];
+};
 
 export interface UpdateProjectBody {
   Name?: string;
@@ -203,6 +228,7 @@ export interface CreateTaskBody {
   Title: string;
   Project: string[]; // Airtable record ID(s)
   Phase?: string[]; // Airtable record ID(s)
+  'Phase Group'?: string;
   Description?: string;
   Assignee: Assignee;
   'Task Type': TaskType;
