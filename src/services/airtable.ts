@@ -28,11 +28,16 @@ import {
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
 
-// Lazily initialised so the server starts without credentials — errors surface
-// at request time rather than at boot, giving a clearer error message.
+// Single Airtable instance with an explicit timeout. The SDK default is 5
+// minutes, which causes routes to hang silently on Railway when Airtable
+// is slow or unreachable. 15 seconds is enough for any legitimate call.
+const airtableClient = new Airtable({
+  apiKey: process.env.AIRTABLE_API_KEY,
+  requestTimeout: 15000,
+});
+
 function base(tableName: string) {
-  return new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
-    .base(process.env.AIRTABLE_BASE_ID!)(tableName);
+  return airtableClient.base(process.env.AIRTABLE_BASE_ID!)(tableName);
 }
 
 // ─── Generic Helpers ──────────────────────────────────────────────────────────
