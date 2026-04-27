@@ -199,6 +199,13 @@ export default function MallorieDashboard() {
               )}
             </button>
           ))}
+          <Link
+            href="/tools/workflow-mapper"
+            className="relative flex-none flex items-center px-4 whitespace-nowrap transition-all duration-150 border-b-2 border-b-transparent text-[12px] font-semibold tracking-[0.16em] uppercase text-[rgba(237,228,200,0.40)] hover:text-[rgba(237,228,200,0.70)]"
+            style={{ minHeight: '48px', fontFamily: 'var(--font-barlow), sans-serif' }}
+          >
+            Tools
+          </Link>
         </nav>
       </div>
 
@@ -236,7 +243,13 @@ export default function MallorieDashboard() {
                     + New Client
                   </button>
                 </div>
-                <PipelineBoard clients={clients} />
+                <PipelineBoard
+                  clients={clients}
+                  onOutreachQueued={() => { loadAll(); setTab('queue'); }}
+                  onAuditKickoffComplete={() => loadAll()}
+                  onStageMoved={() => loadAll()}
+                  onProposalFollowUpQueued={() => { loadAll(); setTab('queue'); }}
+                />
               </section>
             )}
 

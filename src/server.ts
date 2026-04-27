@@ -9,6 +9,7 @@ import emailQueueRouter from './routes/emailQueue';
 import credentialsRouter from './routes/credentials';
 import phasesRouter from './routes/phases';
 import webhooksRouter from './routes/webhooks';
+import toolsRouter from './routes/tools';
 
 const app = express();
 const PORT = process.env.PORT ?? 3001;
@@ -53,6 +54,7 @@ app.use('/api/email-queue', emailQueueRouter);
 app.use('/api/credentials', credentialsRouter);
 app.use('/api/phases', phasesRouter);
 app.use('/webhooks', webhooksRouter);
+app.use('/api/tools', toolsRouter);
 
 // ─── Global error handler ─────────────────────────────────────────────────────
 
