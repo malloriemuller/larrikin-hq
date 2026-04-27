@@ -21,8 +21,8 @@ interface ProjectCardProps {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PHASE_EMAIL_TYPES: Record<string, string[]> = {
-  Audit: ['Welcome Email', 'Post-Interview Thank-You', 'Pre-Meeting Preview', 'Post-Audit-Call', 'Post-Results-Meeting'],
-  Build: ['Milestone Notification', 'Post-Demo Email'],
+  Audit: ['Referral Outreach', 'Welcome Email', 'Post-Intro-Call', 'Post-Interview Thank-You', 'Pre-Meeting Preview', 'Post-Audit-Call', 'Post-Results-Meeting'],
+  Build: ['Build Kickoff', 'Milestone Notification', 'Post-Demo Email'],
   Retainer: ['Retainer Onboarding Email', 'Milestone Notification'],
 };
 

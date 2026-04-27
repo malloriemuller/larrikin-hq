@@ -38,7 +38,8 @@ export type EmailType =
   | 'Referral Outreach'
   | 'Post-Intro-Call'
   | 'Post-Audit-Call'
-  | 'Post-Results-Meeting';
+  | 'Post-Results-Meeting'
+  | 'Build Kickoff';
 
 export type EmailStatus = 'Pending Review' | 'Approved' | 'Sent' | 'Auto-Sent';
 

@@ -30,7 +30,12 @@ export type EmailType =
   | 'Proposal Follow-Up'
   | 'Milestone Notification'
   | 'Post-Demo Email'
-  | 'Retainer Onboarding Email';
+  | 'Retainer Onboarding Email'
+  | 'Referral Outreach'
+  | 'Post-Intro-Call'
+  | 'Post-Audit-Call'
+  | 'Post-Results-Meeting'
+  | 'Build Kickoff';
 
 export interface Client {
   id: string;

@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import {
-  handleAuditContractSigned,
   handleBuildContractSigned,
   handleRetainerContractSigned,
   handleIntakeFormSubmitted,
@@ -91,8 +90,8 @@ router.post('/docusign', async (req: Request, res: Response) => {
   const projectTypeField = customFields.find((f) => f.name === 'Project Type');
   const projectType = projectTypeField?.value as ProjectType | undefined;
 
-  if (!projectType || !['Audit', 'Build', 'Retainer'].includes(projectType)) {
-    console.error('[webhooks/docusign] missing or invalid Project Type custom field', {
+  if (!projectType || !['Build', 'Retainer'].includes(projectType)) {
+    console.error('[webhooks/docusign] missing or invalid Project Type custom field (must be Build or Retainer)', {
       envelopeId: payload.data.envelopeId,
       customFields,
     });
@@ -105,9 +104,6 @@ router.post('/docusign', async (req: Request, res: Response) => {
 
   try {
     switch (projectType) {
-      case 'Audit':
-        await handleAuditContractSigned(clientEmail, payload.data.envelopeId);
-        break;
       case 'Build':
         await handleBuildContractSigned(clientEmail, payload.data.envelopeId);
         break;

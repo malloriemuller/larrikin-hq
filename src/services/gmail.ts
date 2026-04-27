@@ -13,11 +13,19 @@ function getOAuthClient() {
   return oauth2Client;
 }
 
+// RFC 2047 encode the subject when it contains non-ASCII characters (e.g. em dash).
+// Without this, multi-byte UTF-8 bytes in the header are decoded as Latin-1
+// by receiving clients, producing garbage like Ã¢Â€Â" instead of —.
+function encodeSubject(subject: string): string {
+  if (/^[\x00-\x7F]*$/.test(subject)) return subject;
+  return `=?utf-8?B?${Buffer.from(subject, 'utf-8').toString('base64')}?=`;
+}
+
 function buildRawMessage(to: string, subject: string, body: string): string {
   const message = [
     `From: Larrikin AI <${FROM_ADDRESS}>`,
     `To: ${to}`,
-    `Subject: ${subject}`,
+    `Subject: ${encodeSubject(subject)}`,
     'Content-Type: text/plain; charset=utf-8',
     'MIME-Version: 1.0',
     '',

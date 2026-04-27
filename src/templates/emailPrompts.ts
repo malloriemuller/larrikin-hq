@@ -7,8 +7,6 @@ interface PromptResult {
 
 export function buildEmailPrompt(type: EmailType, ctx: EmailDraftContext): PromptResult {
   switch (type) {
-    case 'Welcome Email':
-      return buildWelcomeEmailPrompt(ctx);
     case 'Interview Guide':
       return buildInterviewGuidePrompt(ctx);
     case 'Post-Interview Thank-You':
@@ -31,23 +29,14 @@ export function buildEmailPrompt(type: EmailType, ctx: EmailDraftContext): Promp
       return buildPostAuditCallPrompt(ctx);
     case 'Post-Results-Meeting':
       return buildPostResultsMeetingPrompt(ctx);
+    case 'Build Kickoff':
+      return buildBuildKickoffEmailPrompt(ctx);
     default:
       throw new Error(`Unknown email type: ${type}`);
   }
 }
 
 // ─── Individual Prompt Builders ───────────────────────────────────────────────
-
-function buildWelcomeEmailPrompt(ctx: EmailDraftContext): PromptResult {
-  return {
-    suggestedSubject: `Welcome to Larrikin — your audit starts here`,
-    userPrompt: `Generate a welcome email for ${ctx.clientName} at ${ctx.company}.
-
-Context: Their audit contract has just been signed. This email confirms we're underway and sets a warm, confident tone for the engagement. Next steps are: they'll receive a short intake form to complete before their first interview session.
-
-Keep it under 150 words. Mention we're excited to dig into their systems, confirm what's coming next (intake form, then interview sessions), and make them feel like they're in capable hands. Do not use bullet points.`,
-  };
-}
 
 function buildInterviewGuidePrompt(ctx: EmailDraftContext): PromptResult {
   return {
@@ -218,5 +207,35 @@ Context: Mallorie just walked them through the audit findings and recommended bu
 ${ctx.additionalContext ? `Build options and pricing: ${ctx.additionalContext}` : ''}
 
 Keep it under 180 words. Confident, warm, no jargon. Plain prose.`,
+  };
+}
+
+// ─── AIRTABLE REMINDER ────────────────────────────────────────────────────────
+// Before this prompt will work end-to-end, 'Build Kickoff' must be added as an
+// option to the 'Email Type' single-select field in the Airtable Email Queue
+// table. Without it, createEmailQueueEntry will throw a 422 from Airtable.
+// ─────────────────────────────────────────────────────────────────────────────
+function buildBuildKickoffEmailPrompt(ctx: EmailDraftContext): PromptResult {
+  return {
+    suggestedSubject: `Your Larrikin build — we're getting started`,
+    userPrompt: `Generate a build kickoff email for ${ctx.clientName} at ${ctx.company}.
+
+Context: Their build is officially underway. This is the first email they receive as a paying client. The tone should make them feel genuinely excited and well taken care of — not like they just signed a contract, but like they just gained a highly capable team.
+
+The email should cover:
+1. Genuine excitement to get started — make it feel personal, not templated
+2. A brief, plain-language overview of what to expect during the build:
+   - They'll receive occasional progress update emails to keep them in the loop
+   - Mallorie or Andy may reach out with a quick question here and there — nothing demanding, just keeping things moving
+   - Midway through, they'll schedule a brief check-in call to review progress together
+   - When the build is complete, they'll receive an email to schedule their demo call where they'll see everything live
+3. Reassurance that they don't need to do anything right now — Larrikin has everything they need to get started
+
+Keep the timeline completely vague — no specific dates or durations. This is intentional.
+Project name for reference: ${ctx.projectName ?? 'your project'}
+
+${ctx.additionalContext ? `Additional context: ${ctx.additionalContext}` : ''}
+
+100–220 words. Warm, direct, confidence-inspiring. Write like a person, not a service desk. No bullet points.`,
   };
 }

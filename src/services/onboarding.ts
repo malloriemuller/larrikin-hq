@@ -155,10 +155,8 @@ async function activatePhase(
     phaseType,
     order: phaseOrderMap[phaseType],
     status: 'Active',
-    contractStatus: envelopeId ? 'Signed' : 'Not Started',
-    contractDate: envelopeId
-      ? new Date().toISOString().split('T')[0]
-      : undefined,
+    contractStatus: phaseType === 'Audit' ? 'Not Started' : 'Signed',
+    contractDate: phaseType !== 'Audit' ? new Date().toISOString().split('T')[0] : undefined,
   });
 
   // 5. Update client Stage
@@ -178,9 +176,9 @@ async function activatePhase(
     Project: [project.id],
     Date: new Date().toISOString().split('T')[0],
     Type: 'Note',
-    Summary: envelopeId
-      ? `${phaseType} contract signed. DocuSign envelope: ${envelopeId}`
-      : `${phaseType} phase activated manually.`,
+    Summary: phaseType === 'Audit'
+      ? 'Audit phase activated.'
+      : `${phaseType} contract signed. DocuSign envelope: ${envelopeId}`,
     Author: 'Mallorie',
   });
 
@@ -188,7 +186,7 @@ async function activatePhase(
   // Audit and Build auto-send; Retainer queues for Mallorie review
   const emailTypeMap: Record<PhaseType, EmailType> = {
     Audit: 'Welcome Email',
-    Build: 'Post-Results-Meeting',
+    Build: 'Build Kickoff',
     Retainer: 'Retainer Onboarding Email',
   };
   const autoSend = phaseType !== 'Retainer';
@@ -208,13 +206,6 @@ async function activatePhase(
 }
 
 // ─── Exported contract-signed handlers (wrappers) ────────────────────────────
-
-export async function handleAuditContractSigned(
-  clientEmail: string,
-  envelopeId: string
-): Promise<void> {
-  await activatePhase(clientEmail, 'Audit', envelopeId);
-}
 
 export async function handleBuildContractSigned(
   clientEmail: string,
@@ -268,7 +259,7 @@ export async function handleIntakeFormSubmitted(
     Author: 'Mallorie',
   });
 
-  // Generate interview guide with web search and queue for Mallorie's review
+  // Generate intake-enriched interview guide and send directly to Mallorie's inbox
   const mallorieEmail = process.env.MALLORIE_EMAIL ?? 'hello@thelarrikin.ai';
   const guide = await generateInterviewGuideWithSearch(
     client.fields.Name,
@@ -276,27 +267,16 @@ export async function handleIntakeFormSubmitted(
     intakeResponses
   );
 
-  const guideEntry = await airtable.createEmailQueueEntry({
-    Client: [client.id],
-    'Email Type': 'Interview Guide',
-    To: mallorieEmail,
-    Subject: guide.subject,
-    Body: guide.body,
-    Status: 'Pending Review',
-    'Generation Failed': guide.failed,
+  const firstName = client.fields.Name.split(' ')[0];
+  await sendEmail({
+    to: mallorieEmail,
+    subject: `Interview Guide — ${firstName} / ${client.fields.Company}`,
+    body: guide.body,
   });
 
-  await airtable.createCommunicationsLogEntry({
-    Client: [client.id],
-    Date: new Date().toISOString().split('T')[0],
-    Type: 'Note',
-    Summary: `Interview guide generated (web search included) and queued for review — ${guide.subject}`,
-    Author: 'Mallorie',
-  });
-
-  console.log('[onboarding] intake form processed with web research', {
+  console.log('[onboarding] intake form processed — interview guide sent to Mallorie', {
     clientId: client.id,
-    guideQueued: guideEntry.id,
+    guideFailed: guide.failed,
   });
 }
 
@@ -421,7 +401,9 @@ export async function handleFirefliesSessionEnded(
         context: baseContext,
         autoSend: false,
       });
-      console.log('[onboarding] Fireflies results meeting — Post-Results-Meeting queued', {
+      // Advance client to Proposal stage
+      await airtable.updateClient(client.id, { Stage: 'Proposal' });
+      console.log('[onboarding] Fireflies results meeting — Post-Results-Meeting queued, stage advanced to Proposal', {
         meetingTitle, clientId: client.id,
       });
       break;
@@ -480,6 +462,38 @@ export async function handleReferralOutreachQueued(
   });
 
   console.log('[onboarding] referral outreach queued for review', {
+    clientId: client.id,
+    emailId,
+  });
+
+  return { emailId };
+}
+
+// ─── Proposal follow-up queued ───────────────────────────────────────────────
+// Called from the clients API when Mallorie wants to queue a follow-up on a
+// sent proposal. Always queued for review — never auto-sent.
+
+export async function handleProposalFollowUpQueued(
+  clientId: string
+): Promise<{ emailId: string }> {
+  const client = await airtable.getClient(clientId);
+  const projects = await airtable.listProjects({ clientId: client.id });
+  const activeProject = projects.find((p) => p.fields.Status === 'In Progress');
+
+  const emailId = await queueOrSendEmail({
+    clientId: client.id,
+    projectId: activeProject?.id,
+    emailType: 'Proposal Follow-Up',
+    to: client.fields.Email,
+    context: {
+      clientName: client.fields.Name,
+      company: client.fields.Company,
+      projectName: activeProject?.fields['Name'],
+    },
+    autoSend: false,
+  });
+
+  console.log('[onboarding] proposal follow-up queued for review', {
     clientId: client.id,
     emailId,
   });
