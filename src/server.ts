@@ -33,6 +33,18 @@ app.use(
   })
 );
 
+// Hard response timeout — any route that hasn't responded in 20s gets a 503.
+// Belt-and-suspenders on top of the Airtable SDK requestTimeout.
+app.use((_req, res, next) => {
+  res.setTimeout(20000, () => {
+    if (!res.headersSent) {
+      console.error('[server] request timed out', { url: _req.url });
+      res.status(503).json({ error: 'Request timed out' });
+    }
+  });
+  next();
+});
+
 // Raw body needed for webhook signature validation — must come before json middleware
 app.use('/webhooks', express.raw({ type: 'application/json' }));
 
@@ -71,6 +83,12 @@ app.get('/', (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Larrikin HQ API running on port ${PORT}`);
+  console.log('[startup] env check', {
+    AIRTABLE_API_KEY: process.env.AIRTABLE_API_KEY ? 'set' : 'MISSING',
+    AIRTABLE_BASE_ID: process.env.AIRTABLE_BASE_ID ? 'set' : 'MISSING',
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY ? 'set' : 'MISSING',
+    FRONTEND_URL: process.env.FRONTEND_URL ?? '(not set)',
+  });
 });
 
 export default app;
