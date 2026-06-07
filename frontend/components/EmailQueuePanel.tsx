@@ -8,12 +8,32 @@ interface EmailQueuePanelProps {
   onRefresh: () => void;
 }
 
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  backgroundColor: 'var(--cream)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radius)',
+  padding: '0.75rem',
+  color: 'var(--foreground)',
+  outline: 'none',
+  fontSize: '1rem',
+  fontFamily: 'var(--font-inter), Inter, system-ui, sans-serif',
+  transition: 'border-color 150ms ease, box-shadow 150ms ease',
+};
+
+const focusStyle: React.CSSProperties = {
+  borderColor: 'var(--ember)',
+  boxShadow: '0 0 0 3px oklch(0.68 0.16 50 / 0.12)',
+};
+
 function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: () => void }) {
   const [subject, setSubject] = useState(entry.fields.Subject);
   const [body, setBody] = useState(entry.fields.Body);
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [subjectFocused, setSubjectFocused] = useState(false);
+  const [bodyFocused, setBodyFocused] = useState(false);
 
   const hasEdits = subject !== entry.fields.Subject || body !== entry.fields.Body;
 
@@ -44,41 +64,57 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
   }
 
   return (
-    <div className="rounded-[3px] border border-[rgba(196,175,90,0.13)] overflow-hidden hover:border-[rgba(196,175,90,0.30)] transition-colors">
+    <div
+      className="overflow-hidden transition-colors"
+      style={{
+        border: `1px solid ${expanded ? 'oklch(0.85 0.015 65)' : 'var(--border)'}`,
+        borderRadius: 'var(--radius)',
+      }}
+    >
       {/* Collapsed header */}
       <button
-        className="w-full text-left px-5 py-4 min-h-[80px] flex items-start justify-between gap-4 bg-[#162C1A] hover:bg-[#1E3B23] transition-colors"
+        className="w-full text-left px-5 py-4 min-h-[80px] flex items-start justify-between gap-4 transition-colors"
+        style={{ backgroundColor: expanded ? 'var(--muted)' : 'var(--background)' }}
         onClick={() => setExpanded((e) => !e)}
       >
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2.5 mb-2">
             <span
-              className="text-[11px] font-semibold text-[#C4AF5A] uppercase tracking-[0.22em]"
-              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="text-[11px] font-semibold uppercase tracking-[0.22em]"
+              style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
             >
               {entry.fields['Email Type']}
             </span>
             {entry.fields['Generation Failed'] && (
-              <span className="text-[11px] font-medium text-red-400 bg-red-900/20 px-2 py-0.5 rounded-sm border border-red-800/30">
+              <span
+                className="text-[11px] font-medium px-2 py-0.5"
+                style={{
+                  color: 'var(--error)',
+                  backgroundColor: 'oklch(0.55 0.18 25 / 0.08)',
+                  border: '1px solid oklch(0.55 0.18 25 / 0.2)',
+                  borderRadius: '3px',
+                }}
+              >
                 Draft failed
               </span>
             )}
           </div>
           <p
-            className="text-lg font-bold text-[#EDE4C8] leading-snug"
-            style={{ fontFamily: 'var(--font-playfair), serif' }}
+            className="text-lg font-bold leading-snug"
+            style={{ color: 'var(--foreground)', fontFamily: 'var(--font-fraunces), serif' }}
           >
             {subject || '(No subject)'}
           </p>
           <p
-            className="text-[12px] text-[rgba(237,228,200,0.50)] mt-1 uppercase tracking-[0.10em]"
-            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+            className="text-[12px] mt-1 uppercase tracking-[0.10em]"
+            style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
           >
             To: {entry.fields.To}
           </p>
         </div>
         <svg
-          className={`w-4 h-4 text-[rgba(237,228,200,0.30)] flex-none mt-1.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 flex-none mt-1.5 transition-transform ${expanded ? 'rotate-180' : ''}`}
+          style={{ color: 'var(--faint)' }}
           fill="none" viewBox="0 0 24 24" stroke="currentColor"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -87,11 +123,14 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
 
       {/* Expanded editor */}
       {expanded && (
-        <div className="px-5 pb-5 border-t border-[rgba(196,175,90,0.10)] pt-4 bg-[#0E1B11]">
+        <div
+          className="px-5 pb-5 pt-4"
+          style={{ borderTop: '1px solid var(--border)', backgroundColor: 'var(--cream)' }}
+        >
           <div className="mb-4">
             <label
-              className="block text-[11px] font-semibold uppercase tracking-[0.22em] text-[rgba(237,228,200,0.45)] mb-2"
-              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="block text-[11px] font-semibold uppercase tracking-[0.22em] mb-2"
+              style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
             >
               Subject
             </label>
@@ -99,13 +138,15 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="w-full border border-[rgba(196,175,90,0.18)] rounded-[3px] px-3 py-3 text-base min-h-[48px] focus:outline-none focus:border-[rgba(196,175,90,0.50)] bg-[rgba(0,0,0,0.25)] text-[#EDE4C8]"
+              onFocus={() => setSubjectFocused(true)}
+              onBlur={() => setSubjectFocused(false)}
+              style={{ ...inputStyle, minHeight: '48px', ...(subjectFocused ? focusStyle : {}) }}
             />
           </div>
           <div className="mb-5">
             <label
-              className="block text-[11px] font-semibold uppercase tracking-[0.22em] text-[rgba(237,228,200,0.45)] mb-2"
-              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="block text-[11px] font-semibold uppercase tracking-[0.22em] mb-2"
+              style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
             >
               Body
             </label>
@@ -113,7 +154,15 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
               value={body}
               onChange={(e) => setBody(e.target.value)}
               rows={8}
-              className="w-full border border-[rgba(196,175,90,0.18)] rounded-[3px] px-3 py-3 text-base focus:outline-none focus:border-[rgba(196,175,90,0.50)] font-mono resize-y leading-relaxed bg-[rgba(0,0,0,0.25)] text-[#EDE4C8]"
+              onFocus={() => setBodyFocused(true)}
+              onBlur={() => setBodyFocused(false)}
+              style={{
+                ...inputStyle,
+                fontFamily: 'monospace',
+                resize: 'vertical',
+                lineHeight: '1.6',
+                ...(bodyFocused ? focusStyle : {}),
+              }}
             />
           </div>
 
@@ -121,8 +170,15 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
             <button
               onClick={handleSend}
               disabled={sending}
-              className="flex items-center justify-center min-h-[44px] px-5 rounded-[3px] bg-[#C4AF5A] text-[#0E1B11] text-[12px] font-bold hover:bg-[#D4BF6A] disabled:opacity-50 transition-colors sm:flex-none uppercase tracking-[0.12em]"
-              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="flex items-center justify-center min-h-[44px] px-5 text-[12px] font-bold transition-opacity hover:opacity-90 disabled:opacity-50 sm:flex-none uppercase tracking-[0.12em]"
+              style={{
+                backgroundColor: 'var(--ink)',
+                color: 'var(--background)',
+                borderRadius: '9999px',
+                border: 'none',
+                fontFamily: 'var(--font-inter), sans-serif',
+                cursor: sending ? 'not-allowed' : 'pointer',
+              }}
             >
               {sending ? 'Sending…' : 'Send email'}
             </button>
@@ -130,16 +186,27 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center justify-center min-h-[44px] px-5 rounded-[3px] border border-[rgba(196,175,90,0.25)] text-[rgba(237,228,200,0.70)] text-[12px] hover:border-[rgba(196,175,90,0.50)] hover:text-[#EDE4C8] disabled:opacity-50 transition-colors sm:flex-none uppercase tracking-[0.12em]"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="flex items-center justify-center min-h-[44px] px-5 text-[12px] transition-opacity hover:opacity-70 disabled:opacity-50 sm:flex-none uppercase tracking-[0.12em]"
+                style={{
+                  border: '1px solid var(--border)',
+                  color: 'var(--muted-foreground)',
+                  borderRadius: 'var(--radius)',
+                  backgroundColor: 'transparent',
+                  fontFamily: 'var(--font-inter), sans-serif',
+                }}
               >
                 {saving ? 'Saving…' : 'Save draft'}
               </button>
             )}
             <button
               onClick={handleDiscard}
-              className="flex items-center justify-center min-h-[44px] px-5 rounded-[3px] text-red-400/60 text-[12px] hover:text-red-400 transition-colors sm:flex-none sm:ml-auto uppercase tracking-[0.12em]"
-              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="flex items-center justify-center min-h-[44px] px-5 text-[12px] transition-opacity hover:opacity-80 sm:flex-none sm:ml-auto uppercase tracking-[0.12em]"
+              style={{
+                color: 'var(--error)',
+                backgroundColor: 'transparent',
+                border: 'none',
+                fontFamily: 'var(--font-inter), sans-serif',
+              }}
             >
               Discard
             </button>
@@ -153,7 +220,14 @@ function EmailCard({ entry, onRefresh }: { entry: EmailQueueEntry; onRefresh: ()
 export default function EmailQueuePanel({ entries, onRefresh }: EmailQueuePanelProps) {
   if (entries.length === 0) {
     return (
-      <div className="text-base text-[rgba(237,228,200,0.35)] text-center py-12 border border-dashed border-[rgba(196,175,90,0.15)] rounded-[3px] italic">
+      <div
+        className="text-base text-center py-12 italic"
+        style={{
+          color: 'var(--muted-foreground)',
+          border: '1px dashed var(--border)',
+          borderRadius: 'var(--radius)',
+        }}
+      >
         No emails pending review
       </div>
     );

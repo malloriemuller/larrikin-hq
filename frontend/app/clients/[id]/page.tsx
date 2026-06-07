@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 import {
   getClient,
   getClientTimeline,
@@ -21,37 +21,42 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-const STAGE_STYLES: Record<ClientStage, { bg: string; text: string }> = {
-  Lead:      { bg: 'bg-[rgba(237,228,200,0.08)]',  text: 'text-[rgba(237,228,200,0.50)]' },
-  Discovery: { bg: 'bg-[rgba(196,175,90,0.15)]',   text: 'text-[#C4AF5A]' },
-  Proposal:  { bg: 'bg-[rgba(196,175,90,0.20)]',   text: 'text-[#D4BF6A]' },
-  Delivery:  { bg: 'bg-[rgba(237,228,200,0.12)]',  text: 'text-[#EDE4C8]' },
-  Retainer:  { bg: 'bg-[#C4AF5A]',                 text: 'text-[#0E1B11]' },
-  Archived:  { bg: 'bg-[rgba(237,228,200,0.05)]',  text: 'text-[rgba(237,228,200,0.30)]' },
+const STAGE_STYLES: Record<ClientStage, { bg: string; color: string }> = {
+  Lead:      { bg: 'oklch(0.92 0.008 75)',            color: 'var(--muted-foreground)' },
+  Discovery: { bg: 'oklch(0.68 0.16 50 / 0.12)',     color: 'var(--ember)' },
+  Proposal:  { bg: 'oklch(0.68 0.16 50 / 0.18)',     color: 'oklch(0.65 0.15 50)' },
+  Delivery:  { bg: 'oklch(0.9 0.01 70)',              color: 'var(--foreground)' },
+  Retainer:  { bg: 'var(--ember)',                    color: 'var(--background)' },
+  Archived:  { bg: 'oklch(0.94 0.006 75)',            color: 'var(--faint)' },
 };
 
 const TYPE_CONFIG: Record<CommsType, { icon: string; color: string; label: string }> = {
-  Note:    { icon: '◆', color: '#C4AF5A',                     label: 'Note' },
-  Email:   { icon: '▶', color: '#EDE4C8',                     label: 'Email' },
-  Meeting: { icon: '●', color: '#6BAF88',                     label: 'Meeting' },
-  Call:    { icon: '○', color: 'rgba(237,228,200,0.40)',       label: 'Call' },
+  Note:    { icon: '◆', color: 'var(--ember)',         label: 'Note' },
+  Email:   { icon: '▶', color: 'var(--foreground)',    label: 'Email' },
+  Meeting: { icon: '●', color: 'oklch(0.5 0.1 155)',   label: 'Meeting' },
+  Call:    { icon: '○', color: 'var(--muted-foreground)', label: 'Call' },
 };
 
 const PROJECT_STATUS_DOT: Record<string, string> = {
-  'In Progress': 'bg-[#6BAF88]',
-  'Not Started': 'bg-[rgba(237,228,200,0.20)]',
-  'Complete':    'bg-[#C4AF5A]',
-  'On Hold':     'bg-[rgba(237,228,200,0.15)]',
+  'In Progress': 'oklch(0.5 0.1 155)',
+  'Not Started': 'var(--border)',
+  'Complete':    'var(--ember)',
+  'On Hold':     'var(--faint)',
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StageBadge({ stage }: { stage: ClientStage }) {
-  const { bg, text } = STAGE_STYLES[stage] ?? STAGE_STYLES.Lead;
+  const { bg, color } = STAGE_STYLES[stage] ?? STAGE_STYLES.Lead;
   return (
     <span
-      className={`inline-block px-2.5 py-1 rounded-[2px] text-[11px] font-semibold tracking-[0.16em] uppercase ${bg} ${text}`}
-      style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+      className="inline-block px-2.5 py-1 text-[11px] font-semibold tracking-[0.16em] uppercase"
+      style={{
+        background: bg,
+        color,
+        borderRadius: 'var(--radius)',
+        fontFamily: 'var(--font-inter), sans-serif',
+      }}
     >
       {stage}
     </span>
@@ -59,20 +64,30 @@ function StageBadge({ stage }: { stage: ClientStage }) {
 }
 
 function ProjectPill({ project }: { project: Project }) {
-  const dot = PROJECT_STATUS_DOT[project.status] ?? 'bg-[rgba(237,228,200,0.20)]';
+  const dotColor = PROJECT_STATUS_DOT[project.status] ?? 'var(--border)';
   return (
-    <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[3px] border border-[rgba(196,175,90,0.13)] bg-[rgba(255,255,255,0.03)]">
-      <span className={`w-1.5 h-1.5 rounded-full flex-none ${dot}`} />
+    <div
+      className="flex items-center gap-2.5 px-3.5 py-2.5"
+      style={{
+        borderRadius: 'var(--radius)',
+        border: '1px solid var(--border)',
+        backgroundColor: 'var(--muted)',
+      }}
+    >
+      <span
+        className="w-1.5 h-1.5 rounded-full flex-none"
+        style={{ backgroundColor: dotColor }}
+      />
       <div className="min-w-0">
         <p
-          className="text-[14px] font-semibold text-[#EDE4C8] leading-snug truncate"
-          style={{ fontFamily: 'var(--font-playfair), serif' }}
+          className="text-[14px] font-semibold leading-snug truncate"
+          style={{ color: 'var(--foreground)', fontFamily: 'var(--font-fraunces), serif' }}
         >
           {project.name}
         </p>
         <p
-          className="text-[11px] uppercase tracking-[0.12em] text-[rgba(237,228,200,0.40)] mt-0.5"
-          style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+          className="text-[11px] uppercase tracking-[0.12em] mt-0.5"
+          style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
         >
           {project.status}
         </p>
@@ -89,11 +104,11 @@ function TimelineEntry({ entry }: { entry: CommunicationsLogEntry }) {
       <div className="flex flex-col items-end flex-none w-[96px]">
         <span
           className="text-[11px] font-semibold tabular-nums text-right w-full"
-          style={{ fontFamily: 'var(--font-barlow), sans-serif', color: 'rgba(237,228,200,0.30)' }}
+          style={{ fontFamily: 'var(--font-inter), sans-serif', color: 'var(--faint)' }}
         >
           {formatDate(entry.fields.Date)}
         </span>
-        <div className="flex-1 w-px bg-[rgba(196,175,90,0.10)] mt-1.5" />
+        <div className="flex-1 w-px mt-1.5" style={{ backgroundColor: 'var(--border)' }} />
       </div>
 
       {/* Icon */}
@@ -109,14 +124,14 @@ function TimelineEntry({ entry }: { entry: CommunicationsLogEntry }) {
         <div className="flex items-center gap-2 mb-1.5">
           <span
             className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-            style={{ fontFamily: 'var(--font-barlow), sans-serif', color }}
+            style={{ fontFamily: 'var(--font-inter), sans-serif', color }}
           >
             {label}
           </span>
         </div>
         <p
-          className="text-[15px] text-[rgba(237,228,200,0.85)] leading-relaxed"
-          style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+          className="text-[15px] leading-relaxed"
+          style={{ color: 'var(--foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
         >
           {entry.fields.Summary}
         </p>
@@ -153,25 +168,24 @@ export default function ClientDetailPage() {
   useEffect(() => { load(); }, [load]);
 
   return (
-    <div className="min-h-screen bg-[#0E1B11]">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       {/* Header */}
       <header
-        className="sticky top-0 z-20 border-b border-[rgba(196,175,90,0.13)] px-5 sm:px-8 flex items-center gap-4"
-        style={{ minHeight: '60px', background: 'rgba(14,27,17,0.94)', backdropFilter: 'blur(12px)' }}
+        className="sticky top-0 z-20 px-5 sm:px-8 flex items-center gap-4"
+        style={{
+          minHeight: '60px',
+          background: 'oklch(0.985 0.005 80 / 0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--border)',
+        }}
       >
-        <Image
-          src="/logo-green-gold.png"
-          alt="Larrikin"
-          width={0}
-          height={0}
-          sizes="160px"
-          className="h-6 w-auto flex-none"
-        />
-        <div className="w-px h-4 bg-[rgba(196,175,90,0.20)] flex-none" />
+        <Logo className="flex-none" />
+        <div className="w-px h-4 flex-none" style={{ backgroundColor: 'var(--border)' }} />
         <Link
           href="/"
-          className="text-[12px] font-semibold tracking-[0.18em] uppercase text-[rgba(237,228,200,0.40)] hover:text-[#EDE4C8] transition-colors flex items-center gap-1.5"
-          style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+          className="text-[12px] font-semibold tracking-[0.18em] uppercase transition-opacity hover:opacity-60 flex items-center gap-1.5"
+          style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
         >
           ← Pipeline
         </Link>
@@ -180,44 +194,46 @@ export default function ClientDetailPage() {
       <main className="px-5 py-8 sm:px-8 sm:py-10 max-w-2xl mx-auto">
         {loading ? (
           <div
-            className="text-[rgba(237,228,200,0.35)] text-base py-20 text-center tracking-widest uppercase"
-            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+            className="text-base py-20 text-center tracking-widest uppercase"
+            style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
           >
             Loading…
           </div>
         ) : error || !client ? (
-          <p className="text-base text-[rgba(237,228,200,0.50)] py-20 text-center">{error ?? 'Client not found.'}</p>
+          <p className="text-base py-20 text-center" style={{ color: 'var(--muted-foreground)' }}>
+            {error ?? 'Client not found.'}
+          </p>
         ) : (
           <>
             {/* Client header */}
-            <div className="mb-8 pb-8 border-b border-[rgba(196,175,90,0.12)]">
+            <div className="mb-8 pb-8" style={{ borderBottom: '1px solid var(--border)' }}>
               <div className="flex items-start justify-between gap-4 mb-3">
                 <h1
-                  className="text-[2.25rem] font-bold text-[#EDE4C8] leading-tight"
-                  style={{ fontFamily: 'var(--font-playfair), serif' }}
+                  className="text-[2.25rem] font-bold leading-tight"
+                  style={{ color: 'var(--foreground)', fontFamily: 'var(--font-fraunces), serif' }}
                 >
                   {client.fields.Name}
                 </h1>
                 <StageBadge stage={client.fields.Stage} />
               </div>
               <p
-                className="text-[13px] font-semibold uppercase tracking-[0.14em] text-[rgba(237,228,200,0.45)] mb-3"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="text-[13px] font-semibold uppercase tracking-[0.14em] mb-3"
+                style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 {client.fields.Company}
               </p>
               <div className="flex flex-wrap gap-4">
                 <a
                   href={`mailto:${client.fields.Email}`}
-                  className="text-[14px] text-[rgba(237,228,200,0.55)] hover:text-[#EDE4C8] transition-colors"
-                  style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                  className="text-[14px] transition-opacity hover:opacity-70"
+                  style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
                 >
                   {client.fields.Email}
                 </a>
                 {client.fields.Phone && (
                   <span
-                    className="text-[14px] text-[rgba(237,228,200,0.40)]"
-                    style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                    className="text-[14px]"
+                    style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
                   >
                     {client.fields.Phone}
                   </span>
@@ -227,10 +243,10 @@ export default function ClientDetailPage() {
 
             {/* Projects */}
             {client.projects && client.projects.length > 0 && (
-              <div className="mb-8 pb-8 border-b border-[rgba(196,175,90,0.12)]">
+              <div className="mb-8 pb-8" style={{ borderBottom: '1px solid var(--border)' }}>
                 <p
-                  className="text-[12px] font-semibold tracking-[0.20em] uppercase text-[#C4AF5A] mb-4"
-                  style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                  className="text-[12px] font-semibold tracking-[0.20em] uppercase mb-4"
+                  style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
                 >
                   Projects
                 </p>
@@ -245,15 +261,15 @@ export default function ClientDetailPage() {
             {/* Timeline */}
             <div>
               <p
-                className="text-[12px] font-semibold tracking-[0.20em] uppercase text-[#C4AF5A] mb-6"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="text-[12px] font-semibold tracking-[0.20em] uppercase mb-6"
+                style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 Activity
               </p>
               {timeline.length === 0 ? (
                 <p
-                  className="text-base text-[rgba(237,228,200,0.35)] italic"
-                  style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                  className="text-base italic"
+                  style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
                 >
                   No activity recorded yet.
                 </p>

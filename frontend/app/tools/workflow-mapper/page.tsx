@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 interface Workflow {
   id: string;
@@ -101,27 +101,40 @@ export default function WorkflowMapper() {
 
   const hasRate = result?.workflows.some((w) => w.monthlyCostSaved !== undefined);
 
+  const priorityEmberColor = (p: 'High' | 'Medium' | 'Low') =>
+    p === 'High'
+      ? 'var(--ember)'
+      : p === 'Medium'
+      ? 'oklch(0.68 0.16 50 / 0.6)'
+      : 'var(--faint)';
+
   return (
-    <div className="min-h-screen bg-[#0E1B11]">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--background)' }}>
       {/* Header */}
       <header
-        className="sticky top-0 z-20 border-b border-[rgba(196,175,90,0.13)] px-5 sm:px-8 flex items-center justify-between gap-4"
-        style={{ minHeight: '60px', background: 'rgba(14,27,17,0.94)', backdropFilter: 'blur(12px)' }}
+        className="sticky top-0 z-20 px-5 sm:px-8 flex items-center justify-between gap-4"
+        style={{
+          minHeight: '60px',
+          background: 'oklch(0.985 0.005 80 / 0.92)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderBottom: '1px solid var(--border)',
+        }}
       >
         <div className="flex items-center gap-4">
-          <Image src="/logo-green-gold.png" alt="Larrikin" width={0} height={0} sizes="160px" className="h-6 w-auto" />
-          <div className="w-px h-4 bg-[rgba(196,175,90,0.20)]" />
+          <Logo />
+          <div className="w-px h-4" style={{ backgroundColor: 'var(--border)' }} />
           <span
-            className="text-[13px] font-semibold tracking-[0.20em] text-[#C4AF5A] uppercase"
-            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+            className="text-[13px] font-semibold tracking-[0.20em] uppercase"
+            style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
           >
             Mallorie · HQ
           </span>
         </div>
         <Link
           href="/andy"
-          className="text-[12px] font-semibold tracking-[0.18em] uppercase text-[rgba(237,228,200,0.40)] hover:text-[#EDE4C8] transition-colors"
-          style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+          className="text-[12px] font-semibold tracking-[0.18em] uppercase transition-opacity hover:opacity-60"
+          style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
         >
           Andy →
         </Link>
@@ -129,23 +142,32 @@ export default function WorkflowMapper() {
 
       {/* Tab bar */}
       <div
-        className="sticky top-[60px] z-10 border-b border-[rgba(196,175,90,0.13)]"
-        style={{ background: 'rgba(22,44,26,0.95)', backdropFilter: 'blur(8px)' }}
+        className="sticky top-[60px] z-10"
+        style={{
+          background: 'oklch(0.95 0.01 80 / 0.95)',
+          backdropFilter: 'blur(8px)',
+          borderBottom: '1px solid var(--border)',
+        }}
       >
         <nav className="flex overflow-x-auto scrollbar-hide px-5 sm:px-8">
           {(['Pipeline', 'Projects', 'Tasks', 'Queue'] as const).map((label) => (
             <Link
               key={label}
               href="/"
-              className="relative flex-none flex items-center px-4 whitespace-nowrap transition-all duration-150 border-b-2 border-b-transparent text-[12px] font-semibold tracking-[0.16em] uppercase text-[rgba(237,228,200,0.40)] hover:text-[rgba(237,228,200,0.70)]"
-              style={{ minHeight: '48px', fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="relative flex-none flex items-center px-4 whitespace-nowrap transition-all duration-150 border-b-2 border-b-transparent text-[12px] font-semibold tracking-[0.16em] uppercase hover:opacity-80"
+              style={{ minHeight: '48px', fontFamily: 'var(--font-inter), sans-serif', color: 'var(--muted-foreground)' }}
             >
               {label}
             </Link>
           ))}
           <span
-            className="relative flex-none flex items-center px-4 whitespace-nowrap border-b-2 border-b-[#C4AF5A] text-[12px] font-semibold tracking-[0.16em] uppercase text-[#EDE4C8]"
-            style={{ minHeight: '48px', fontFamily: 'var(--font-barlow), sans-serif' }}
+            className="relative flex-none flex items-center px-4 whitespace-nowrap border-b-2 text-[12px] font-semibold tracking-[0.16em] uppercase"
+            style={{
+              minHeight: '48px',
+              fontFamily: 'var(--font-inter), sans-serif',
+              color: 'var(--foreground)',
+              borderBottomColor: 'var(--ember)',
+            }}
           >
             Tools
           </span>
@@ -154,20 +176,25 @@ export default function WorkflowMapper() {
 
       <main className="px-5 py-8 sm:px-8 sm:py-10 max-w-3xl mx-auto">
         {/* Section header */}
-        <div className="border-b border-[rgba(196,175,90,0.12)] pb-5 mb-7">
+        <div className="pb-5 mb-7" style={{ borderBottom: '1px solid var(--border)' }}>
           <p
-            className="text-[12px] font-semibold tracking-[0.22em] uppercase text-[#C4AF5A] mb-2"
-            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+            className="text-[12px] font-semibold tracking-[0.22em] uppercase mb-2"
+            style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
           >
             Tools
           </p>
           <div className="flex items-end justify-between gap-4">
-            <h2 className="text-[2.25rem] font-bold text-[#EDE4C8] leading-none">Workflow Mapper</h2>
+            <h2
+              className="text-[2.25rem] font-bold leading-none"
+              style={{ color: 'var(--foreground)' }}
+            >
+              Workflow Mapper
+            </h2>
             {result && (
               <button
                 onClick={reset}
-                className="text-[12px] font-semibold tracking-[0.16em] uppercase text-[rgba(237,228,200,0.40)] hover:text-[#EDE4C8] transition-colors"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="text-[12px] font-semibold tracking-[0.16em] uppercase transition-opacity hover:opacity-60"
+                style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 ← New audit
               </button>
@@ -179,8 +206,8 @@ export default function WorkflowMapper() {
           <div className="flex flex-col gap-5">
             <div>
               <label
-                className="block text-[11px] font-semibold tracking-[0.18em] uppercase text-[rgba(237,228,200,0.50)] mb-2"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="block text-[11px] font-semibold tracking-[0.18em] uppercase mb-2"
+                style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 Audit notes
               </label>
@@ -189,34 +216,57 @@ export default function WorkflowMapper() {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Paste raw notes, transcript, or stream-of-consciousness from the audit call…"
                 rows={14}
-                className="w-full bg-[#162C1A] border border-[rgba(196,175,90,0.18)] rounded-[3px] px-4 py-3 text-[14px] text-[#EDE4C8] placeholder-[rgba(237,228,200,0.20)] focus:outline-none focus:border-[rgba(196,175,90,0.45)] resize-y"
-                style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                className="w-full px-4 py-3 text-[14px] focus:outline-none resize-y"
+                style={{
+                  backgroundColor: 'var(--cream)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  color: 'var(--foreground)',
+                  fontFamily: 'var(--font-inter), sans-serif',
+                  transition: 'border-color 150ms ease',
+                }}
+                onFocus={e => (e.target.style.borderColor = 'oklch(0.68 0.16 50 / 0.6)')}
+                onBlur={e => (e.target.style.borderColor = 'var(--border)')}
               />
             </div>
 
             <div>
               <label
-                className="block text-[11px] font-semibold tracking-[0.18em] uppercase text-[rgba(237,228,200,0.50)] mb-2"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="block text-[11px] font-semibold tracking-[0.18em] uppercase mb-2"
+                style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 Avg. hourly labor cost (optional) — used to calculate $ ROI
               </label>
               <div className="relative w-48">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[rgba(237,228,200,0.35)]">$</span>
+                <span
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px]"
+                  style={{ color: 'var(--faint)' }}
+                >
+                  $
+                </span>
                 <input
                   type="number"
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(e.target.value)}
                   placeholder="e.g. 45"
                   min={0}
-                  className="w-full bg-[#162C1A] border border-[rgba(196,175,90,0.18)] rounded-[3px] pl-7 pr-4 py-2.5 text-[14px] text-[#EDE4C8] placeholder-[rgba(237,228,200,0.20)] focus:outline-none focus:border-[rgba(196,175,90,0.45)]"
-                  style={{ fontFamily: 'var(--font-dm-sans), sans-serif' }}
+                  className="w-full pl-7 pr-4 py-2.5 text-[14px] focus:outline-none"
+                  style={{
+                    backgroundColor: 'var(--cream)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                    color: 'var(--foreground)',
+                    fontFamily: 'var(--font-inter), sans-serif',
+                  }}
                 />
               </div>
             </div>
 
             {error && (
-              <p className="text-[13px] text-[#E57373]" style={{ fontFamily: 'var(--font-barlow), sans-serif' }}>
+              <p
+                className="text-[13px]"
+                style={{ color: 'var(--error)', fontFamily: 'var(--font-inter), sans-serif' }}
+              >
                 {error}
               </p>
             )}
@@ -224,8 +274,14 @@ export default function WorkflowMapper() {
             <button
               onClick={handleGenerate}
               disabled={!notes.trim() || loading}
-              className="self-start flex items-center gap-2 px-5 rounded-sm bg-[#C4AF5A] text-[#0E1B11] text-[12px] font-bold hover:bg-[#D4BF6A] transition-colors uppercase tracking-[0.12em] disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ minHeight: '40px', fontFamily: 'var(--font-barlow), sans-serif' }}
+              className="self-start flex items-center gap-2 px-5 text-[12px] font-bold transition-opacity hover:opacity-90 uppercase tracking-[0.12em] disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{
+                minHeight: '40px',
+                fontFamily: 'var(--font-inter), sans-serif',
+                backgroundColor: 'var(--ink)',
+                color: 'var(--background)',
+                borderRadius: '9999px',
+              }}
             >
               {loading ? 'Generating…' : 'Generate Process Map'}
             </button>
@@ -235,18 +291,23 @@ export default function WorkflowMapper() {
             {/* Client header */}
             <div>
               <h3
-                className="text-[1.75rem] font-bold text-[#EDE4C8] leading-tight"
-                style={{ fontFamily: 'var(--font-playfair), serif' }}
+                className="text-[1.75rem] font-bold leading-tight"
+                style={{ color: 'var(--foreground)', fontFamily: 'var(--font-fraunces), serif' }}
               >
                 {result.clientName}
               </h3>
               <p
-                className="text-[12px] font-semibold tracking-[0.18em] uppercase text-[rgba(237,228,200,0.45)] mt-1"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="text-[12px] font-semibold tracking-[0.18em] uppercase mt-1"
+                style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 {result.industry}
               </p>
-              <p className="text-[14px] text-[rgba(237,228,200,0.70)] mt-3 leading-relaxed">{result.auditSummary}</p>
+              <p
+                className="text-[14px] mt-3 leading-relaxed"
+                style={{ color: 'var(--muted-foreground)' }}
+              >
+                {result.auditSummary}
+              </p>
             </div>
 
             {/* Stat row */}
@@ -259,87 +320,114 @@ export default function WorkflowMapper() {
                   ? [{ label: '$ saved / year', value: fmtDollars(result.totalYearlySavings) }]
                   : []),
               ].map(({ label, value }) => (
-                <div key={label} className="bg-[#162C1A] border border-[rgba(196,175,90,0.13)] rounded-[3px] px-4 py-4">
+                <div
+                  key={label}
+                  className="px-4 py-4"
+                  style={{
+                    backgroundColor: 'var(--muted)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius)',
+                  }}
+                >
                   <p
-                    className="text-[11px] font-semibold tracking-[0.16em] uppercase text-[rgba(237,228,200,0.40)] mb-1"
-                    style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                    className="text-[11px] font-semibold tracking-[0.16em] uppercase mb-1"
+                    style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
                   >
                     {label}
                   </p>
-                  <p className="text-[1.5rem] font-bold text-[#EDE4C8] tabular-nums">{value}</p>
+                  <p
+                    className="text-[1.5rem] font-bold tabular-nums"
+                    style={{ color: 'var(--foreground)' }}
+                  >
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>
 
             {/* Top recommendation */}
             <div
-              className="bg-[#162C1A] border border-[rgba(196,175,90,0.13)] rounded-[3px] px-5 py-4"
-              style={{ borderLeft: '3px solid #C4AF5A' }}
+              className="px-5 py-4"
+              style={{
+                backgroundColor: 'var(--muted)',
+                border: '1px solid var(--border)',
+                borderLeft: '3px solid var(--ember)',
+                borderRadius: 'var(--radius)',
+              }}
             >
               <p
-                className="text-[11px] font-semibold tracking-[0.18em] uppercase text-[#C4AF5A] mb-2"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="text-[11px] font-semibold tracking-[0.18em] uppercase mb-2"
+                style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 Top Recommendation
               </p>
-              <p className="text-[14px] text-[#EDE4C8] leading-relaxed">{result.topRecommendation}</p>
+              <p className="text-[14px] leading-relaxed" style={{ color: 'var(--foreground)' }}>
+                {result.topRecommendation}
+              </p>
             </div>
 
             {/* Workflow cards */}
             <div className="flex flex-col gap-3">
               <p
-                className="text-[11px] font-semibold tracking-[0.18em] uppercase text-[rgba(237,228,200,0.40)]"
-                style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                className="text-[11px] font-semibold tracking-[0.18em] uppercase"
+                style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
               >
                 Workflows
               </p>
               {result.workflows.map((w) => {
                 const isOpen = expanded.has(w.id);
-                const priorityColor =
-                  w.priority === 'High'
-                    ? '#C4AF5A'
-                    : w.priority === 'Medium'
-                    ? 'rgba(196,175,90,0.55)'
-                    : 'rgba(237,228,200,0.25)';
+                const pColor = priorityEmberColor(w.priority);
 
                 return (
                   <div
                     key={w.id}
-                    className="bg-[#162C1A] border border-[rgba(196,175,90,0.13)] rounded-[3px] overflow-hidden"
+                    className="overflow-hidden"
+                    style={{
+                      backgroundColor: 'var(--muted)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius)',
+                    }}
                   >
                     <button
                       onClick={() => toggleExpand(w.id)}
-                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left hover:bg-[#1E3B23] transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors"
+                      style={{ backgroundColor: isOpen ? 'var(--cream)' : undefined }}
                     >
                       <span
-                        className="text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-0.5 rounded-[2px] flex-none"
-                        style={{ color: priorityColor, border: `1px solid ${priorityColor}` }}
+                        className="text-[10px] font-bold tracking-[0.14em] uppercase px-2 py-0.5 flex-none"
+                        style={{
+                          color: pColor,
+                          border: `1px solid ${pColor}`,
+                          borderRadius: '3px',
+                          fontFamily: 'var(--font-inter), sans-serif',
+                        }}
                       >
                         {w.priority}
                       </span>
                       <span
-                        className="flex-1 text-[14px] font-semibold text-[#EDE4C8] text-left"
-                        style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                        className="flex-1 text-[14px] font-semibold text-left"
+                        style={{ color: 'var(--foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
                       >
                         {w.name}
                       </span>
                       <div className="flex items-center gap-3 flex-none">
                         <span
-                          className="text-[12px] text-[rgba(237,228,200,0.45)] tabular-nums hidden sm:block"
-                          style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                          className="text-[12px] tabular-nums hidden sm:block"
+                          style={{ color: 'var(--muted-foreground)', fontFamily: 'var(--font-inter), sans-serif' }}
                         >
                           {w.estimatedHoursSavedPerMonth}h saved/mo
                         </span>
                         {w.yearlyCostSaved !== undefined && (
                           <span
-                            className="text-[12px] text-[#C4AF5A] tabular-nums hidden sm:block"
-                            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                            className="text-[12px] tabular-nums hidden sm:block"
+                            style={{ color: 'var(--ember)', fontFamily: 'var(--font-inter), sans-serif' }}
                           >
                             {fmtDollars(w.yearlyCostSaved)}/yr
                           </span>
                         )}
                         <svg
-                          className={`w-4 h-4 text-[rgba(237,228,200,0.30)] transition-transform flex-none ${isOpen ? 'rotate-180' : ''}`}
+                          className={`w-4 h-4 flex-none transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                          style={{ color: 'var(--faint)' }}
                           fill="none"
                           viewBox="0 0 24 24"
                           stroke="currentColor"
@@ -350,47 +438,55 @@ export default function WorkflowMapper() {
                     </button>
 
                     {isOpen && (
-                      <div className="px-4 pb-4 pt-1 border-t border-[rgba(196,175,90,0.10)] flex flex-col gap-4">
-                        <p className="text-[13px] text-[rgba(237,228,200,0.65)] leading-relaxed">{w.description}</p>
+                      <div
+                        className="px-4 pb-4 pt-1 flex flex-col gap-4"
+                        style={{ borderTop: '1px solid var(--border)' }}
+                      >
+                        <p
+                          className="text-[13px] leading-relaxed"
+                          style={{ color: 'var(--muted-foreground)' }}
+                        >
+                          {w.description}
+                        </p>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                           <div>
                             <p
-                              className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1"
-                              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                              className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1"
+                              style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                             >
                               Frequency
                             </p>
-                            <p className="text-[13px] text-[#EDE4C8]">{w.frequency}</p>
+                            <p className="text-[13px]" style={{ color: 'var(--foreground)' }}>{w.frequency}</p>
                           </div>
                           <div>
                             <p
-                              className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1"
-                              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                              className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1"
+                              style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                             >
                               Hours / month
                             </p>
-                            <p className="text-[13px] text-[#EDE4C8] tabular-nums">{w.estimatedHoursPerMonth}</p>
+                            <p className="text-[13px] tabular-nums" style={{ color: 'var(--foreground)' }}>{w.estimatedHoursPerMonth}</p>
                           </div>
                           {w.monthlyCostSaved !== undefined && (
                             <>
                               <div>
                                 <p
-                                  className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1"
-                                  style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                                  className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1"
+                                  style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                                 >
                                   $ saved / month
                                 </p>
-                                <p className="text-[13px] text-[#C4AF5A] tabular-nums">{fmtDollars(w.monthlyCostSaved)}</p>
+                                <p className="text-[13px] tabular-nums" style={{ color: 'var(--ember)' }}>{fmtDollars(w.monthlyCostSaved)}</p>
                               </div>
                               <div>
                                 <p
-                                  className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1"
-                                  style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                                  className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1"
+                                  style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                                 >
                                   $ saved / year
                                 </p>
-                                <p className="text-[13px] text-[#C4AF5A] tabular-nums">{fmtDollars(w.yearlyCostSaved ?? 0)}</p>
+                                <p className="text-[13px] tabular-nums" style={{ color: 'var(--ember)' }}>{fmtDollars(w.yearlyCostSaved ?? 0)}</p>
                               </div>
                             </>
                           )}
@@ -399,8 +495,8 @@ export default function WorkflowMapper() {
                         {w.currentTools.length > 0 && (
                           <div>
                             <p
-                              className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1.5"
-                              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                              className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1.5"
+                              style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                             >
                               Current tools
                             </p>
@@ -408,7 +504,13 @@ export default function WorkflowMapper() {
                               {w.currentTools.map((tool) => (
                                 <span
                                   key={tool}
-                                  className="text-[11px] px-2 py-0.5 rounded-[2px] bg-[rgba(196,175,90,0.08)] text-[rgba(237,228,200,0.55)] border border-[rgba(196,175,90,0.12)]"
+                                  className="text-[11px] px-2 py-0.5"
+                                  style={{
+                                    backgroundColor: 'var(--background)',
+                                    color: 'var(--muted-foreground)',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: '3px',
+                                  }}
                                 >
                                   {tool}
                                 </span>
@@ -420,15 +522,19 @@ export default function WorkflowMapper() {
                         {w.painPoints.length > 0 && (
                           <div>
                             <p
-                              className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1.5"
-                              style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                              className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1.5"
+                              style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                             >
                               Pain points
                             </p>
                             <ul className="flex flex-col gap-1">
                               {w.painPoints.map((point, i) => (
-                                <li key={i} className="text-[13px] text-[rgba(237,228,200,0.55)] flex items-start gap-2">
-                                  <span className="text-[rgba(196,175,90,0.40)] mt-0.5 flex-none">—</span>
+                                <li
+                                  key={i}
+                                  className="text-[13px] flex items-start gap-2"
+                                  style={{ color: 'var(--muted-foreground)' }}
+                                >
+                                  <span className="mt-0.5 flex-none" style={{ color: 'var(--ember)' }}>—</span>
                                   {point}
                                 </li>
                               ))}
@@ -438,33 +544,46 @@ export default function WorkflowMapper() {
 
                         <div>
                           <p
-                            className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1.5"
-                            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                            className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1.5"
+                            style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                           >
                             Automation readiness
                           </p>
                           <div className="flex items-center gap-3">
-                            <div className="flex-1 h-1.5 bg-[rgba(255,255,255,0.06)] rounded-full overflow-hidden">
+                            <div
+                              className="flex-1 h-1.5 rounded-full overflow-hidden"
+                              style={{ backgroundColor: 'var(--border)' }}
+                            >
                               <div
-                                className="h-full rounded-full bg-[#C4AF5A]"
-                                style={{ width: `${w.automationReadiness * 10}%` }}
+                                className="h-full rounded-full"
+                                style={{ width: `${w.automationReadiness * 10}%`, backgroundColor: 'var(--ember)' }}
                               />
                             </div>
-                            <span className="text-[12px] font-bold text-[#EDE4C8] tabular-nums flex-none">
+                            <span
+                              className="text-[12px] font-bold tabular-nums flex-none"
+                              style={{ color: 'var(--foreground)' }}
+                            >
                               {w.automationReadiness}/10
                             </span>
                           </div>
-                          <p className="text-[12px] text-[rgba(237,228,200,0.45)] mt-1">{w.automationReadinessReason}</p>
+                          <p
+                            className="text-[12px] mt-1"
+                            style={{ color: 'var(--muted-foreground)' }}
+                          >
+                            {w.automationReadinessReason}
+                          </p>
                         </div>
 
                         <div>
                           <p
-                            className="text-[10px] font-semibold tracking-[0.14em] uppercase text-[rgba(237,228,200,0.35)] mb-1.5"
-                            style={{ fontFamily: 'var(--font-barlow), sans-serif' }}
+                            className="text-[10px] font-semibold tracking-[0.14em] uppercase mb-1.5"
+                            style={{ color: 'var(--faint)', fontFamily: 'var(--font-inter), sans-serif' }}
                           >
                             Recommended approach
                           </p>
-                          <p className="text-[13px] text-[#EDE4C8] leading-relaxed">{w.recommendedApproach}</p>
+                          <p className="text-[13px] leading-relaxed" style={{ color: 'var(--foreground)' }}>
+                            {w.recommendedApproach}
+                          </p>
                         </div>
                       </div>
                     )}
